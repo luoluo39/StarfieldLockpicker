@@ -1,5 +1,8 @@
-# StarfieldLockpicker
-A simple tool that autoimaticly unlock locks in Starfield
+[English](https://github.com/luoluo39/StarfieldLockpicker/blob/main/README.md)   [简体中文](https://github.com/luoluo39/StarfieldLockpicker/blob/main/README-cn.md)
+
+# Starfield Lockpicker
+
+A simple tool that automaticly unlock locks in Starfield
 ### Usage:
 1. Start game and this tool with any order
 2. Enter the unlock in game
