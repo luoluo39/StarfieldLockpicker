@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using PInvoke;
 using StarfieldLockpicker;
 
 Application.SetHighDpiMode(HighDpiMode.SystemAware);
@@ -27,10 +26,11 @@ else
     Console.WriteLine("no config found, creating default config.");
 }
 
+var messageWindow = new MessageWindow();
+
 using var cts = new CancellationTokenSource();
 using var app = new UnlockApp(config, cts.Token);
-app.Run();
+app.Run(messageWindow);
 //hook only works with a message loop
-
-Application.Run();
+Application.Run(messageWindow);
 cts.Cancel();

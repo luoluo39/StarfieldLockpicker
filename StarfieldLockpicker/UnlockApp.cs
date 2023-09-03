@@ -19,7 +19,7 @@ public class UnlockApp : IDisposable
         this.cancellationToken = cancellationToken;
     }
 
-    public void Run()
+    public void Run(Form messageForm)
     {
         Input.ForceReload();
         keybdHook.Install();
