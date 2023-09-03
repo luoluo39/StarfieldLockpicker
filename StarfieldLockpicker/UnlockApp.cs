@@ -1,55 +1,39 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Drawing.Imaging;
 using System.Numerics;
+using System.Security.Cryptography;
 using StarfieldLockpicker.Inputs;
 
 namespace StarfieldLockpicker;
 
 public class UnlockApp : IDisposable
 {
-    private KeyboardHook keybdHook = new();
     private Task? runningTask;
-    private AppConfig config;
+    private AppConfig config = AppConfig.Instance;
     private CancellationToken cancellationToken;
     private int status;
 
-    public UnlockApp(AppConfig config, CancellationToken cancellationToken)
+    public UnlockApp(CancellationToken cancellationToken)
     {
-        this.config = config;
         this.cancellationToken = cancellationToken;
     }
 
-    public void Run(Form messageForm)
+    public void Run(MessageWindow messageWindow)
     {
         Input.ForceReload();
-        keybdHook.Install();
-        keybdHook.OnKeyboardEvent += OnKeybdHookOnOnKeyboardEvent;
+
+        messageWindow.OnHoyKeyPressed += OnKeybdHookOnOnKeyboardEvent;
     }
 
-    private bool OnKeybdHookOnOnKeyboardEvent(KeyboardHook _, KeyboardHook.EventArgs args)
+    private void OnKeybdHookOnOnKeyboardEvent()
     {
-        if (args.State != KeyState.KeyUp) return false;
-
-        if (args is { Key: VKCode.F10, } && TrySwitchStatus(AppStatus.Ready, AppStatus.WaitingCountInput))
+        if (TrySwitchStatus(AppStatus.Ready, AppStatus.Unlocking))
         {
-            return true;
-        }
-
-        if (args is { Key: <= VKCode.Num0 or > VKCode.Num9 } && TrySwitchStatus(AppStatus.WaitingCountInput, AppStatus.Ready))
-        {
-            return true;
-        }
-
-        if (args is { Key: > VKCode.Num0 and <= VKCode.Num9 } && TrySwitchStatus(AppStatus.WaitingCountInput, AppStatus.Unlocking))
-        {
-            var keyCount = (args.Key - VKCode.Num0);
             //start a task to avoid (stuck or exception in a hook callback and block all keyboard inputs)
-            runningTask = UnlockAsync(cancellationToken, keyCount);
+            runningTask = UnlockAsync(cancellationToken);
             runningTask.ContinueWith(task => TrySwitchStatus(AppStatus.Unlocking, AppStatus.Ready), cancellationToken);
-            return true;
         }
-
-        return false;
     }
 
     private bool TrySwitchStatus(AppStatus from, AppStatus to)
@@ -58,18 +42,18 @@ public class UnlockApp : IDisposable
     }
 
     [SuppressMessage("ReSharper", "MethodSupportsCancellation")]
-    private async Task UnlockAsync(CancellationToken cancellationToken, int keyCount)
+    private async Task UnlockAsync(CancellationToken cancellationToken)
     {
         Console.WriteLine("Begin");
         //first we get a image of each level of the lock (and also the first key)
-        var (keys, levels) = await CaptureLockAndKeys(keyCount);
+        var (keys, locks) = await CaptureLockAndKeys();
 
         //to reduce search range, we find every possible position of each key
         Console.WriteLine("Captured");
-        var keyPositions = FindKeyPositions(keys, levels);
+        var keyPositions = FindKeyPositions(keys, locks);
 
         //pick one pos for each key, and find the first solve
-        var result = FindFirstSolve(levels, keys, keyPositions);
+        var result = FindFirstSolve(locks, keys, keyPositions);
         if (result is null)
         {
             Console.WriteLine("No solve, maybe try again?");
@@ -174,50 +158,100 @@ public class UnlockApp : IDisposable
         return keyPositions;
     }
 
-    private async Task<(uint[] keys, uint[] levels)> CaptureLockAndKeys(int keyCount)
+    private async Task<(uint[] keys, uint[] levels)> CaptureLockAndKeys()
     {
-        var keys = new uint[keyCount];
+        List<uint> keyShapes = new();
 
-        var baseImage = Utility.CaptureScreen(config.Display);
-
-        var shape0 = GetShape32(baseImage, config.CircleRadius0, config.SampleRadius0, config.SampleThr0);
-        var shape1 = GetShape32(baseImage, config.CircleRadius1, config.SampleRadius1, config.SampleThr1);
-        var shape2 = GetShape32(baseImage, config.CircleRadius2, config.SampleRadius2, config.SampleThr2);
-        if (shape0 == 0)
-            shape0 = uint.MaxValue;
-        if (shape1 == 0)
-            shape1 = uint.MaxValue;
-        if (shape2 == 0)
-            shape2 = uint.MaxValue;
-        //key0
-        var shapeKey0 = GetShape32(baseImage, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey);
-
-        var levels = new[] { shape0, shape1, shape2 };
-        keys[0] = shapeKey0;
-
-        ConsoleWriteShape32(shape0);
-        ConsoleWriteShape32(shape1);
-        ConsoleWriteShape32(shape2);
-        ConsoleWriteShape32(shapeKey0);
-
-        //get the remaining keys
-        for (int i = 1; i < keyCount; i++)
+        int counter = 0;
+        Bitmap? firstImage = null;
+        while (true)
         {
-            Input.KeyboardKeyClick(VKCode.T, 50);
-            await Task.Delay(100);
             var image = Utility.CaptureScreen(config.Display);
-            var keyShape = GetShape32(image, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey);
-            await Task.Delay(100);
+            var shape = GetKeyShape32(image);
+            if (firstImage is not null)
+            {
+                var mse = Utility.CalculateMSE(image, firstImage);
+                Console.WriteLine($"image mse: {mse}");
 
-            keys[i] = keyShape;
-            ConsoleWriteShape32(keyShape);
+                if (mse < 20)
+                    break;
+
+                image.Dispose();
+            }
+            else
+                firstImage = image;
+
+            keyShapes.Add(shape);
+
+            Input.KeyboardKeyClick(VKCode.T, 50);
+            await Task.Delay(50);
+
+            if (counter++ > 20)
+                throw new Exception();
         }
 
-        Input.KeyboardKeyClick(VKCode.T, 50);
-        await Task.Delay(50);
+        uint[] lockShapes = new uint[3];
+        {
+            var shape0 = GetShape32(firstImage, config.CircleRadius0, config.SampleRadius0, config.SampleThr0);
+            var shape1 = GetShape32(firstImage, config.CircleRadius1, config.SampleRadius1, config.SampleThr1);
+            var shape2 = GetShape32(firstImage, config.CircleRadius2, config.SampleRadius2, config.SampleThr2);
+            if (shape0 == 0)
+                shape0 = uint.MaxValue;
+            if (shape1 == 0)
+                shape1 = uint.MaxValue;
+            if (shape2 == 0)
+                shape2 = uint.MaxValue;
 
-        return (keys, levels);
+            lockShapes[0] = shape0;
+            lockShapes[1] = shape1;
+            lockShapes[2] = shape2;
+        }
+
+        firstImage.Dispose();
+
+        Console.WriteLine("Lock shapes:");
+        for (int i = 0; i < lockShapes.Length; i++)
+        {
+            Console.Write($"  {i}: ");
+            ConsoleWriteShape32(lockShapes[i]);
+        }
+
+        Console.WriteLine("Key shapes:");
+        for (int i = 0; i < keyShapes.Count; i++)
+        {
+            Console.Write($"  {i}: ");
+            ConsoleWriteShape32(keyShapes[i]);
+        }
+
+        return (keyShapes.ToArray(), lockShapes);
     }
+
+    private uint GetKeyShape32(Bitmap bitmap, bool print = false)
+    {
+        return GetShape32(bitmap, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey, print);
+    }
+
+    private uint GetShape32(float circleRadius, float sampleRadius, float thr, bool print = false)
+    {
+        using var image = Utility.CaptureScreen(config.Display);
+        var screenSize = Screen.AllScreens[config.Display].Bounds.Size;
+        var center = new Vector2(config.CircleCenterX, config.CircleCenterY);
+        var scaledCenter = center * new Vector2(screenSize.Width / 1920f, screenSize.Height / 1080f);
+        var scaledRadius = circleRadius * screenSize.Width / 1920f;
+        var scaledSampleRadius = sampleRadius * screenSize.Width / 1920f;
+
+        uint v = 0;
+        for (var i = 0; i < 32; i++)
+        {
+            var x = 2 * float.Pi * i / 32;
+            var (sin, cos) = float.SinCos(x);
+            var pos = new Vector2(cos, sin) * scaledRadius + scaledCenter;
+            var gray = Utility.CalculateMaxColor(image, pos, scaledSampleRadius, print);
+            v |= gray > thr ? 1U << i : 0;
+        }
+        return v;
+    }
+
 
     private uint GetShape32(Bitmap image, float circleRadius, float sampleRadius, float thr, bool print = false)
     {
@@ -248,7 +282,6 @@ public class UnlockApp : IDisposable
         }
         Console.WriteLine();
     }
-
 
     private static KeyLevelRot[]? FindFirstSolve(ReadOnlySpan<uint> locks, ReadOnlySpan<uint> keys, List<KeyLevelRot>[] keyPositionsArray)
     {
@@ -301,6 +334,5 @@ public class UnlockApp : IDisposable
 
     public void Dispose()
     {
-        keybdHook.Dispose();
     }
 }

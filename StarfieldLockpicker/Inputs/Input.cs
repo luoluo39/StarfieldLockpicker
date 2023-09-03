@@ -5,8 +5,6 @@ namespace StarfieldLockpicker.Inputs;
 
 public static class Input
 {
-    [DllImport("user32.dll")] private static extern ushort VkKeyScanA(byte ch);
-
     private static Lazy<ScanCode[]> lazyVKCode2ScanCode = new(LoadVKCode2ScanCode);
     private static ScanCode[] VKCode2ScanCode => lazyVKCode2ScanCode.Value;
 
@@ -17,17 +15,6 @@ public static class Input
         for (int i = 0; i < keys.Length; i++)
         {
             arr[keys[i]] = (ScanCode)MapVirtualKey(keys[i], MapVirtualKeyTranslation.MAPVK_VK_TO_VSC);
-        }
-        return arr;
-    }
-
-    private static VirtualKey[] LoadChar2VKCode()
-    {
-        var arr = new VirtualKey[256];
-        for (int i = 0; i < 256; i++)
-        {
-            var val = VkKeyScanA((byte)i);
-            arr[i] = unchecked((short)val) < 0 ? 0 : (VirtualKey)val;
         }
         return arr;
     }

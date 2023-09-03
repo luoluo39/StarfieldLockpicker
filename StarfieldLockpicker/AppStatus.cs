@@ -3,6 +3,5 @@
 enum AppStatus
 {
     Ready,
-    WaitingCountInput,
-    Unlocking,
+    Running,
 }

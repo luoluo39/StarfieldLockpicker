@@ -1,8 +1,59 @@
-﻿namespace StarfieldLockpicker;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+
+namespace StarfieldLockpicker;
 
 [Serializable]
 public class AppConfig
 {
+    private const string ConfigPath = "config.json";
+
+    public static AppConfig Instance
+    {
+        get
+        {
+            if (_instance is not null)
+                return _instance;
+            if (!TryLoadOrCreateConfig(out _instance))
+            {
+                Console.WriteLine("failed to load config. exiting");
+                throw new Exception();
+            }
+            return _instance;
+        }
+    }
+
+    private static AppConfig? _instance;
+
+    private static bool TryLoadOrCreateConfig([NotNullWhen(true)] out AppConfig? result)
+    {
+        if (File.Exists(ConfigPath))
+        {
+            var text = File.ReadAllText(ConfigPath);
+            try
+            {
+                var deserialized = JsonSerializer.Deserialize<AppConfig>(text) ?? throw new NullReferenceException("Null reference deserialized");
+
+                Console.WriteLine("config loaded");
+                result = deserialized;
+                return true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("failed to load config!");
+                Console.WriteLine(e);
+                result = null;
+                return false;
+            }
+        }
+
+        result = new AppConfig();
+        var serialized = JsonSerializer.Serialize(result);
+        File.WriteAllText(ConfigPath, serialized);
+        Console.WriteLine("no config found, creating default config.");
+        return true;
+    }
+
     public float CircleCenterX { get; set; } = 960;
     public float CircleCenterY { get; set; } = 540;
 
