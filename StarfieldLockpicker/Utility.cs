@@ -13,6 +13,27 @@ public static class Utility
     [DllImport("user32", SetLastError = true)]
     public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
+    public static Vector2 ScalePosition(Vector2 value)
+    {
+        var config = AppConfig.Instance;
+        return value * config.ScreenSizeVector / new Vector2(config.ReferenceResolutionWidth, config.ReferenceResolutionHeight);
+    }
+
+    public static float ScaleRadius(float value)
+    {
+        return value * AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth;
+    }
+
+    public static int ScaleWidth(int value)
+    {
+        return value * AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth;
+    }
+
+    public static int ScaleHeight(int value)
+    {
+        return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight;
+    }
+
     public static Bitmap CaptureScreen(int display)
     {
         var captureRectangle = Screen.AllScreens[display].Bounds;
@@ -45,7 +66,7 @@ public static class Utility
         return true;
     }
 
-    public static double CalculateMSE(Bitmap bmp1, Bitmap bmp2)
+    public static double CalculateKeyAreaMSE(Bitmap bmp1, Bitmap bmp2)
     {
         if (bmp1.Size != bmp2.Size)
             throw new ArgumentException("Bitmaps must have the same dimensions.");
@@ -59,11 +80,13 @@ public static class Utility
 
         //1333,130,494,744 on 1080p
 
-        var x0 = 1333 * width / 1920;
-        var y0 = 130 * height / 1080;
+        var config = AppConfig.Instance;
 
-        var x1 = x0 + 494 * width / 1920;
-        var y1 = y0 + 744 * height / 1080;
+        var x0 = ScaleWidth(config.KeyAreaX0);
+        var y0 = ScaleHeight(config.KeyAreaY0);
+
+        var x1 = x0 + ScaleWidth(config.KeyAreaWidth);
+        var y1 = y0 + ScaleWidth(config.KeyAreaHeight);
 
         unsafe
         {

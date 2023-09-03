@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.Numerics;
 using System.Security.Cryptography;
@@ -167,10 +168,10 @@ public class UnlockApp : IDisposable
         while (true)
         {
             var image = Utility.CaptureScreen(config.Display);
-            var shape = GetKeyShape32(image);
+            var shape = GetShape32(image, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey);
             if (firstImage is not null)
             {
-                var mse = Utility.CalculateMSE(image, firstImage);
+                var mse = Utility.CalculateKeyAreaMSE(image, firstImage);
                 Console.WriteLine($"image mse: {mse}");
 
                 if (mse < 20)
@@ -199,7 +200,7 @@ public class UnlockApp : IDisposable
                 shape0 = uint.MaxValue;
             if (shape1 == 0)
                 shape1 = uint.MaxValue;
-            if (shape2 == 0)
+            if (BitOperations.PopCount(shape2) < 10)
                 shape2 = uint.MaxValue;
 
             lockShapes[0] = shape0;
@@ -226,40 +227,12 @@ public class UnlockApp : IDisposable
         return (keyShapes.ToArray(), lockShapes);
     }
 
-    private uint GetKeyShape32(Bitmap bitmap, bool print = false)
-    {
-        return GetShape32(bitmap, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey, print);
-    }
-
-    private uint GetShape32(float circleRadius, float sampleRadius, float thr, bool print = false)
-    {
-        using var image = Utility.CaptureScreen(config.Display);
-        var screenSize = Screen.AllScreens[config.Display].Bounds.Size;
-        var center = new Vector2(config.CircleCenterX, config.CircleCenterY);
-        var scaledCenter = center * new Vector2(screenSize.Width / 1920f, screenSize.Height / 1080f);
-        var scaledRadius = circleRadius * screenSize.Width / 1920f;
-        var scaledSampleRadius = sampleRadius * screenSize.Width / 1920f;
-
-        uint v = 0;
-        for (var i = 0; i < 32; i++)
-        {
-            var x = 2 * float.Pi * i / 32;
-            var (sin, cos) = float.SinCos(x);
-            var pos = new Vector2(cos, sin) * scaledRadius + scaledCenter;
-            var gray = Utility.CalculateMaxColor(image, pos, scaledSampleRadius, print);
-            v |= gray > thr ? 1U << i : 0;
-        }
-        return v;
-    }
-
-
     private uint GetShape32(Bitmap image, float circleRadius, float sampleRadius, float thr, bool print = false)
     {
-        var screenSize = Screen.AllScreens[config.Display].Bounds.Size;
         var center = new Vector2(config.CircleCenterX, config.CircleCenterY);
-        var scaledCenter = center * new Vector2(screenSize.Width / 1920f, screenSize.Height / 1080f);
-        var scaledRadius = circleRadius * screenSize.Width / 1920f;
-        var scaledSampleRadius = sampleRadius * screenSize.Width / 1920f;
+        var scaledCenter = Utility.ScalePosition(center);
+        var scaledRadius = Utility.ScaleRadius(circleRadius);
+        var scaledSampleRadius = Utility.ScaleRadius(sampleRadius);
 
         uint v = 0;
         for (var i = 0; i < 32; i++)

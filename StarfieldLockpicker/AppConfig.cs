@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace StarfieldLockpicker;
 
@@ -32,10 +34,14 @@ public class AppConfig
             var text = File.ReadAllText(ConfigPath);
             try
             {
-                var deserialized = JsonSerializer.Deserialize<AppConfig>(text) ?? throw new NullReferenceException("Null reference deserialized");
+                var deserialized = JsonSerializer.Deserialize<AppConfig>(text) ?? throw new NullReferenceException("null deserialized");
 
                 Console.WriteLine("config loaded");
                 result = deserialized;
+
+                var screenSize = Screen.AllScreens[result.Display].Bounds.Size;
+                result.ScreenWidth = screenSize.Width;
+                result.ScreenHeight = screenSize.Height;
                 return true;
             }
             catch (Exception e)
@@ -48,6 +54,11 @@ public class AppConfig
         }
 
         result = new AppConfig();
+        {
+            var screenSize = Screen.AllScreens[result.Display].Bounds.Size;
+            result.ScreenWidth = screenSize.Width;
+            result.ScreenHeight = screenSize.Height;
+        }
         var serialized = JsonSerializer.Serialize(result);
         File.WriteAllText(ConfigPath, serialized);
         Console.WriteLine("no config found, creating default config.");
@@ -71,5 +82,26 @@ public class AppConfig
     public float SampleThr1 { get; set; } = 40;
     public float SampleThr2 { get; set; } = 40;
     public float SampleThrKey { get; set; } = 80;
+
+    public int KeyAreaX0 { get; set; } = 1333;
+    public int KeyAreaY0 { get; set; } = 130;
+    public int KeyAreaWidth { get; set; } = 494;
+    public int KeyAreaHeight { get; set; } = 744;
+
+    public int ReferenceResolutionWidth { get; set; } = 1920;
+    public int ReferenceResolutionHeight { get; set; } = 1080;
+
     public int Display { get; set; } = 0;
+
+    [JsonIgnore]
+    public int ScreenWidth { get; private set; }
+
+    [JsonIgnore]
+    public int ScreenHeight { get; private set; }
+
+    [JsonIgnore]
+    public Vector2 ScreenSizeVector => new(ScreenWidth, ScreenHeight);
+
+    [JsonIgnore]
+    public Size ScreenSize => new(ScreenWidth, ScreenHeight);
 }
