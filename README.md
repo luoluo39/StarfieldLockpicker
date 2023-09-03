@@ -9,7 +9,11 @@ A simple tool that automaticly unlock locks in Starfield
 3. WAIT UNTIL END OF UI ANIMATION
 4. MOVE MOUSE CURSOR AWAY FROM ANY UI ELEMENT
 5. Press F10
-6. Press the count of Key (for example, press Num6 if there are 6 keys)
 
-Work on my laptop (1920x1080, 1.25x dpi), but other device may require adjustment in config.
-See config.json
+## IMPORTANT FOR VERSION 0.2:
+Config modify is normally not needed
+modified config for 0.1 may not work because we will now adjust positions automaticly base on resolution.
+also, you no longer need to input the key count manually, just push F10 and let it do its job.
+### It seems unlikely to happen, but still technically possible: 
+the new detect method will output wrong result if the key shapes periodicity repeats(for example, ABCDABCD),
+if you encounter that, jus manually rotate any key to break this.

@@ -7,6 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StarfieldLockpicker", "Star
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "解决方案项", "解决方案项", "{E9466E27-8DE5-41CA-BE3B-70A215F7EBE4}"
 	ProjectSection(SolutionItems) = preProject
+		README-cn.md = README-cn.md
 		README.md = README.md
 	EndProjectSection
 EndProject
