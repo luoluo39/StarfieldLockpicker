@@ -28,11 +28,11 @@ public class UnlockApp : IDisposable
 
     private void OnKeybdHookOnOnKeyboardEvent()
     {
-        if (TrySwitchStatus(AppStatus.Ready, AppStatus.Unlocking))
+        if (TrySwitchStatus(AppStatus.Ready, AppStatus.Running))
         {
             //start a task to avoid (stuck or exception in a hook callback and block all keyboard inputs)
             runningTask = UnlockAsync(cancellationToken);
-            runningTask.ContinueWith(task => TrySwitchStatus(AppStatus.Unlocking, AppStatus.Ready), cancellationToken);
+            runningTask.ContinueWith(task => TrySwitchStatus(AppStatus.Running, AppStatus.Ready), cancellationToken);
         }
     }
 
