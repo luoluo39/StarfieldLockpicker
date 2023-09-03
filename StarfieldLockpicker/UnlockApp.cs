@@ -225,6 +225,7 @@ public class UnlockApp : IDisposable
         var center = new Vector2(config.CircleCenterX, config.CircleCenterY);
         var scaledCenter = center * new Vector2(screenSize.Width / 1920f, screenSize.Height / 1080f);
         var scaledRadius = circleRadius * screenSize.Width / 1920f;
+        var scaledSampleRadius = sampleRadius * screenSize.Width / 1920f;
 
         uint v = 0;
         for (var i = 0; i < 32; i++)
@@ -232,7 +233,7 @@ public class UnlockApp : IDisposable
             var x = 2 * float.Pi * i / 32;
             var (sin, cos) = float.SinCos(x);
             var pos = new Vector2(cos, sin) * scaledRadius + scaledCenter;
-            var gray = Utility.CalculateMaxColor(image, pos, sampleRadius, print);
+            var gray = Utility.CalculateMaxColor(image, pos, scaledSampleRadius, print);
             v |= gray > thr ? 1U << i : 0;
         }
         return v;
