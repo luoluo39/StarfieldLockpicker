@@ -1,9 +1,10 @@
 ﻿using System.Text.Json;
+using PInvoke;
 using StarfieldLockpicker;
 
+Application.SetHighDpiMode(HighDpiMode.SystemAware);
 //no async method usage here because message loop need to run on main thread
 const string configPath = "config.json";
-
 AppConfig config;
 if (File.Exists(configPath))
 {
@@ -30,5 +31,6 @@ using var cts = new CancellationTokenSource();
 using var app = new UnlockApp(config, cts.Token);
 app.Run();
 //hook only works with a message loop
-Utility.MessageLoop(cts.Token);
+
+Application.Run();
 cts.Cancel();

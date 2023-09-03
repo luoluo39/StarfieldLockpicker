@@ -1,24 +1,17 @@
 ﻿using System.Drawing.Imaging;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using PInvoke;
 
 namespace StarfieldLockpicker;
 
 public static class Utility
 {
-    public static unsafe void MessageLoop(CancellationToken ct)
-    {
+    [DllImport("user32.dll")]
+    public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, int vk);
 
-        User32.MSG msg = default;
-        while (!ct.IsCancellationRequested)
-        {
-            if (User32.PeekMessage(&msg, nint.Zero, 0, 0, User32.PeekMessageRemoveFlags.PM_REMOVE))
-            {
-                User32.TranslateMessage(ref msg);
-                User32.DispatchMessage(ref msg);
-            }
-        }
-    }
+    [DllImport("user32", SetLastError = true)]
+    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
     public static Bitmap CaptureScreen(int display)
     {
