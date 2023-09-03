@@ -20,4 +20,5 @@ public class AppConfig
     public float SampleThr1 { get; set; } = 40;
     public float SampleThr2 { get; set; } = 40;
     public float SampleThrKey { get; set; } = 80;
+    public int Display { get; set; } = 0;
 }

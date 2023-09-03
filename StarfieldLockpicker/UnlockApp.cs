@@ -178,7 +178,7 @@ public class UnlockApp : IDisposable
     {
         var keys = new uint[keyCount];
 
-        var baseImage = Utility.CaptureScreen();
+        var baseImage = Utility.CaptureScreen(config.Display);
 
         var shape0 = GetShape32(baseImage, config.CircleRadius0, config.SampleRadius0, config.SampleThr0);
         var shape1 = GetShape32(baseImage, config.CircleRadius1, config.SampleRadius1, config.SampleThr1);
@@ -205,7 +205,7 @@ public class UnlockApp : IDisposable
         {
             Input.KeyboardKeyClick(VKCode.T, 50);
             await Task.Delay(100);
-            var image = Utility.CaptureScreen();
+            var image = Utility.CaptureScreen(config.Display);
             var keyShape = GetShape32(image, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey);
             await Task.Delay(100);
 
@@ -221,12 +221,17 @@ public class UnlockApp : IDisposable
 
     private uint GetShape32(Bitmap image, float circleRadius, float sampleRadius, float thr, bool print = false)
     {
+        var screenSize = Screen.AllScreens[config.Display].Bounds.Size;
+        var center = new Vector2(config.CircleCenterX, config.CircleCenterY);
+        var scaledCenter = center * new Vector2(screenSize.Width / 1920f, screenSize.Height / 1080f);
+        var scaledRadius = circleRadius * screenSize.Width / 1920f;
+
         uint v = 0;
         for (var i = 0; i < 32; i++)
         {
             var x = 2 * float.Pi * i / 32;
             var (sin, cos) = float.SinCos(x);
-            var pos = new Vector2(cos, sin) * circleRadius + new Vector2(config.CircleCenterX, config.CircleCenterY);
+            var pos = new Vector2(cos, sin) * scaledRadius + scaledCenter;
             var gray = Utility.CalculateMaxColor(image, pos, sampleRadius, print);
             v |= gray > thr ? 1U << i : 0;
         }

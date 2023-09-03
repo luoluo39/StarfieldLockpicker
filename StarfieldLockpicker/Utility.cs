@@ -20,9 +20,9 @@ public static class Utility
         }
     }
 
-    public static Bitmap CaptureScreen()
+    public static Bitmap CaptureScreen(int display)
     {
-        var captureRectangle = Screen.AllScreens[0].Bounds;
+        var captureRectangle = Screen.AllScreens[display].Bounds;
         var captureBitmap = new Bitmap(captureRectangle.Size.Width, captureRectangle.Size.Height, PixelFormat.Format32bppArgb);
         var captureGraphics = Graphics.FromImage(captureBitmap);
         captureGraphics.CopyFromScreen(captureRectangle.Left, captureRectangle.Top, 0, 0, captureRectangle.Size);
