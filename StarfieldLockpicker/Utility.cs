@@ -21,7 +21,7 @@ public static class Utility
 
     public static float ScaleRadius(float value)
     {
-        return value * AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth;
+        return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ScreenHeight;
     }
 
     public static int ScaleWidth(int value)
