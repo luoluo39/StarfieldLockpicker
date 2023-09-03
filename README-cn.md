@@ -1,4 +1,3 @@
-#A simple tool that autoimaticly unlock locks in Starfield
 一个用C#编写的简单工具，可以在星空中自动开锁
 ##用法：
 1. 打开游戏和这个工具
