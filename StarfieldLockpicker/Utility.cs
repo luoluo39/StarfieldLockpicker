@@ -26,7 +26,9 @@ public static class Utility
 
     public static int ScaleWidth(int value)
     {
-        return value * AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth;
+        return value / AppConfig.Instance.ReferenceResolutionHeight * AppConfig.Instance.ScreenHeight +
+               (AppConfig.Instance.ScreenWidth - AppConfig.Instance.ReferenceResolutionWidth /
+                   AppConfig.Instance.ReferenceResolutionHeight * AppConfig.Instance.ScreenHeight) / 2;
     }
 
     public static int ScaleHeight(int value)
