@@ -196,10 +196,30 @@ public class UnlockApp : IDisposable
 
         uint[] lockShapes = new uint[4];
         {
-            var shape0 = GetShape32(firstImage, config.CircleRadius0, config.SampleRadius0, config.SampleThr0);
-            var shape1 = GetShape32(firstImage, config.CircleRadius1, config.SampleRadius1, config.SampleThr1);
-            var shape2 = GetShape32(firstImage, config.CircleRadius2, config.SampleRadius2, config.SampleThr2);
-            var shape3 = GetShape32(firstImage, config.CircleRadius3, config.SampleRadius3, config.SampleThr3);
+            var shape0 = GetShape32(firstImage,
+                config.CircleRadius0, 
+                config.SampleRadius0, 
+                config.SampleThr0, 
+                config.PrintMaxColor0);
+
+            var shape1 = GetShape32(firstImage,
+                config.CircleRadius1,
+                config.SampleRadius1,
+                config.SampleThr1,
+                config.PrintMaxColor1);
+
+            var shape2 = GetShape32(firstImage, 
+                config.CircleRadius2, 
+                config.SampleRadius2, 
+                config.SampleThr2, 
+                config.PrintMaxColor2);
+
+            var shape3 = GetShape32(firstImage,
+                config.CircleRadius3, 
+                config.SampleRadius3, 
+                config.SampleThr3, 
+                config.PrintMaxColor3);
+
             if (shape0 == 0)
                 shape0 = uint.MaxValue;
             if (shape1 == 0)

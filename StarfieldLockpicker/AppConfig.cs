@@ -59,7 +59,7 @@ public class AppConfig
             result.ScreenWidth = screenSize.Width;
             result.ScreenHeight = screenSize.Height;
         }
-        var serialized = JsonSerializer.Serialize(result);
+        var serialized = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(ConfigPath, serialized);
         Console.WriteLine("no config found, creating default config.");
         return true;
@@ -97,6 +97,11 @@ public class AppConfig
     public double ImageMseThr { get; set; } = 45;
 
     public int Display { get; set; } = 0;
+
+    public bool PrintMaxColor0 { get; set; } = false;
+    public bool PrintMaxColor1 { get; set; } = false;
+    public bool PrintMaxColor2 { get; set; } = false;
+    public bool PrintMaxColor3 { get; set; } = false;
 
     [JsonIgnore]
     public int ScreenWidth { get; private set; }
