@@ -174,7 +174,7 @@ public class UnlockApp : IDisposable
                 var mse = Utility.CalculateKeyAreaMSE(image, firstImage);
                 Console.WriteLine($"image mse: {mse}");
 
-                if (mse < 20)
+                if (mse < 45)
                     break;
 
                 image.Dispose();
