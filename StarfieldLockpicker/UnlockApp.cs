@@ -170,12 +170,20 @@ public class UnlockApp : IDisposable
 
         int counter = 0;
         Bitmap? firstImage = null;
+        Bitmap? lastImage = null;
         while (true)
         {
             var image = Utility.CaptureScreen(config.Display);
             var shape = GetShape32(image, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey, config.PrintMaxColorKey);
-            if (firstImage is not null)
+            if (firstImage is not null && lastImage is not null)
             {
+                //last image should also be not null
+
+                //this is same image, but game miss the input
+                var mse0 = Utility.CalculateKeyAreaMSE(image, lastImage);
+                if (mse0 < AppConfig.Instance.ImageMseThr)
+                    continue;
+
                 var mse = Utility.CalculateKeyAreaMSE(image, firstImage);
                 Console.WriteLine($"image mse: {mse}");
 
@@ -186,6 +194,7 @@ public class UnlockApp : IDisposable
             }
             else
                 firstImage = image;
+            lastImage = image;
 
             keyShapes.Add(shape);
 
@@ -195,6 +204,7 @@ public class UnlockApp : IDisposable
             if (counter++ > 20)
                 throw new Exception();
         }
+        lastImage.Dispose();
 
         uint[] lockShapes = new uint[4];
         {
