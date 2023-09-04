@@ -80,11 +80,11 @@ public class AppConfig
     public float SampleRadius3 { get; set; } = 5;
     public float SampleRadiusKey { get; set; } = 7;
 
-    public float SampleThr0 { get; set; } = 0.2f;
-    public float SampleThr1 { get; set; } = 0.2f;
-    public float SampleThr2 { get; set; } = 0.2f;
-    public float SampleThr3 { get; set; } = 0.2f;
-    public float SampleThrKey { get; set; } = 0.2f;
+    public float SampleThr0 { get; set; } = 0.175f;
+    public float SampleThr1 { get; set; } = 0.175f;
+    public float SampleThr2 { get; set; } = 0.175f;
+    public float SampleThr3 { get; set; } = 0.175f;
+    public float SampleThrKey { get; set; } = 0.175f;
 
     public int KeyAreaX0 { get; set; } = 1333;
     public int KeyAreaY0 { get; set; } = 130;
