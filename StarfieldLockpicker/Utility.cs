@@ -2,12 +2,13 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 using PInvoke;
+using Vortice.DirectInput;
 
 namespace StarfieldLockpicker;
 
 public static class Utility
 {
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, int vk);
 
     [DllImport("user32", SetLastError = true)]

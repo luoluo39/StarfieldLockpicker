@@ -98,6 +98,8 @@ public class AppConfig
 
     public int Display { get; set; } = 0;
 
+    public string HotKey { get; set; } = "F10";
+
     public bool PrintMaxColor0 { get; set; } = false;
     public bool PrintMaxColor1 { get; set; } = false;
     public bool PrintMaxColor2 { get; set; } = false;

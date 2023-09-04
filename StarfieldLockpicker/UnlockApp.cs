@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -83,7 +84,7 @@ public class UnlockApp : IDisposable
                 for (int j = 0; j < 32 - t.Rotation; j++)
                 {
                     Input.KeyboardKeyClick(VKCode.A, 50);
-                    await Task.Delay(20);
+                    await Task.Delay(50);
                 }
             }
             else
@@ -91,7 +92,7 @@ public class UnlockApp : IDisposable
                 for (int j = 0; j < t.Rotation; j++)
                 {
                     Input.KeyboardKeyClick(VKCode.D, 50);
-                    await Task.Delay(20);
+                    await Task.Delay(50);
                 }
             }
 
@@ -197,9 +198,9 @@ public class UnlockApp : IDisposable
         uint[] lockShapes = new uint[4];
         {
             var shape0 = GetShape32(firstImage,
-                config.CircleRadius0, 
-                config.SampleRadius0, 
-                config.SampleThr0, 
+                config.CircleRadius0,
+                config.SampleRadius0,
+                config.SampleThr0,
                 config.PrintMaxColor0);
 
             var shape1 = GetShape32(firstImage,
@@ -208,16 +209,16 @@ public class UnlockApp : IDisposable
                 config.SampleThr1,
                 config.PrintMaxColor1);
 
-            var shape2 = GetShape32(firstImage, 
-                config.CircleRadius2, 
-                config.SampleRadius2, 
-                config.SampleThr2, 
+            var shape2 = GetShape32(firstImage,
+                config.CircleRadius2,
+                config.SampleRadius2,
+                config.SampleThr2,
                 config.PrintMaxColor2);
 
             var shape3 = GetShape32(firstImage,
-                config.CircleRadius3, 
-                config.SampleRadius3, 
-                config.SampleThr3, 
+                config.CircleRadius3,
+                config.SampleRadius3,
+                config.SampleThr3,
                 config.PrintMaxColor3);
 
             if (shape0 == 0)
@@ -282,6 +283,50 @@ public class UnlockApp : IDisposable
         }
         Console.WriteLine();
     }
+
+    //private static KeyLevelRot[]? FindFirstSolve(uint[] locks, uint[] keys, ReadOnlySpan<List<KeyLevelRot>> //keyPositionsArray)
+    //{
+    //    Span<uint> pg = stackalloc uint[locks.Length];
+    //    Span<int> indexes = stackalloc int[keys.Length];
+    //    locks.CopyTo(pg);
+    //    return FindFirstSolve2(pg, indexes, keys, keyPositionsArray);
+    //}
+
+    //private static KeyLevelRot[]? FindFirstSolve2(Span<uint> pg, Span<int> indexes, uint[] keys, //ReadOnlySpan<List<KeyLevelRot>> keyPositionsArray)
+    //{
+    //    for (var i = 0; i < keyPositionsArray[0].Count; i++)
+    //    {
+    //        var keyLevelRot = keyPositionsArray[0][i];
+    //        var rotated = uint.RotateLeft(keys[i], keyLevelRot.Rotation);
+    //        if (keyLevelRot.Level >= 0 && (pg[keyLevelRot.Level] & rotated) != 0)
+    //        {
+    //            //collision
+    //            continue;
+    //        }
+    //
+    //        pg[keyLevelRot.Level] |= rotated;
+    //
+    //        if (keyPositionsArray.Length == 1)
+    //        {
+    //            if (Utility.CheckAllBitSet(pg))
+    //            {
+    //                //this is first solve
+    //
+    //                var result = new KeyLevelRot[keys.Length];
+    //                for (var j = 0; j < keys.Length; j++)
+    //                {
+    //                    result[j] = keyPositionsArray[j][index[j]];
+    //                }
+    //                //we need only the first result
+    //                return result;
+    //            }
+    //        }
+    //        else
+    //        {
+    //            FindFirstSolve2(pg, keys, keyPositionsArray[1..]);
+    //        }
+    //    }
+    //}
 
     private static KeyLevelRot[]? FindFirstSolve(uint[] locks, uint[] keys, List<KeyLevelRot>[] keyPositionsArray)
     {

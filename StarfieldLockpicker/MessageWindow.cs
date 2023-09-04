@@ -1,5 +1,6 @@
 ﻿using PInvoke;
 using StarfieldLockpicker;
+using StarfieldLockpicker.Inputs;
 
 public class MessageWindow : Form
 {
@@ -7,7 +8,15 @@ public class MessageWindow : Form
 
     public MessageWindow()
     {
-        Utility.RegisterHotKey(Handle, 0, 0, (int)User32.VirtualKey.VK_F10);
+        if (!Enum.TryParse<VKCode>(AppConfig.Instance.HotKey, true, out var vk))
+        {
+            Console.WriteLine($"The key {AppConfig.Instance.HotKey} can not be parsed");
+        }
+        if (!Utility.RegisterHotKey(Handle, 0, 0, (int)vk))
+        {
+            Utility.UnregisterHotKey(IntPtr.Zero, 0);
+            Console.WriteLine($"The hotkey {vk} is in use!");
+        }
     }
 
     protected override void WndProc(ref Message m)
