@@ -80,11 +80,11 @@ public class AppConfig
     public float SampleRadius3 { get; set; } = 5;
     public float SampleRadiusKey { get; set; } = 7;
 
-    public float SampleThr0 { get; set; } = 80;
-    public float SampleThr1 { get; set; } = 40;
-    public float SampleThr2 { get; set; } = 40;
-    public float SampleThr3 { get; set; } = 41;
-    public float SampleThrKey { get; set; } = 80;
+    public float SampleThr0 { get; set; } = 0.2f;
+    public float SampleThr1 { get; set; } = 0.2f;
+    public float SampleThr2 { get; set; } = 0.2f;
+    public float SampleThr3 { get; set; } = 0.2f;
+    public float SampleThrKey { get; set; } = 0.2f;
 
     public int KeyAreaX0 { get; set; } = 1333;
     public int KeyAreaY0 { get; set; } = 130;
@@ -100,10 +100,11 @@ public class AppConfig
 
     public string HotKey { get; set; } = "F10";
 
-    public bool PrintMaxColor0 { get; set; } = false;
-    public bool PrintMaxColor1 { get; set; } = false;
-    public bool PrintMaxColor2 { get; set; } = false;
-    public bool PrintMaxColor3 { get; set; } = false;
+    public bool PrintMaxColor0 { get; set; } = true;
+    public bool PrintMaxColor1 { get; set; } = true;
+    public bool PrintMaxColor2 { get; set; } = true;
+    public bool PrintMaxColor3 { get; set; } = true;
+    public bool PrintMaxColorKey { get; set; } = false;
 
     [JsonIgnore]
     public int ScreenWidth { get; private set; }

@@ -172,7 +172,7 @@ public class UnlockApp : IDisposable
         while (true)
         {
             var image = Utility.CaptureScreen(config.Display);
-            var shape = GetShape32(image, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey);
+            var shape = GetShape32(image, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey, config.PrintMaxColorKey);
             if (firstImage is not null)
             {
                 var mse = Utility.CalculateKeyAreaMSE(image, firstImage);
@@ -268,9 +268,14 @@ public class UnlockApp : IDisposable
             var x = 2 * float.Pi * i / 32;
             var (sin, cos) = float.SinCos(x);
             var pos = new Vector2(cos, sin) * scaledRadius + scaledCenter;
-            var gray = Utility.CalculateMaxColor(image, pos, scaledSampleRadius, print);
+            var gray = Utility.CalculateMaxB(image, pos, scaledSampleRadius);
+
+            if (print) Console.Write($",{gray:F2}");
+
             v |= gray > thr ? 1U << i : 0;
         }
+        if (print) Console.WriteLine();
+
         return v;
     }
 

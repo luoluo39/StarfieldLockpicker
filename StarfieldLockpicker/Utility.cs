@@ -112,7 +112,7 @@ public static class Utility
         return msePerPixel;
     }
 
-    public static float CalculateMaxColor(Bitmap bitmap, Vector2 center, float radius, bool print = false)
+    public static float CalculateMaxColor(Bitmap bitmap, Vector2 center, float radius)
     {
         float max = -1;
 
@@ -133,9 +133,32 @@ public static class Utility
                 }
             }
         }
-        if (print)
-            Console.WriteLine(max);
         return max;
+    }
+
+    public static float CalculateMaxB(Bitmap bitmap, Vector2 center, float radius)
+    {
+        float max = -1;
+
+        var x0 = (int)float.Floor(center.X - radius);
+        var y0 = (int)float.Floor(center.Y - radius);
+        var x1 = (int)float.Ceiling(center.X + radius);
+        var y1 = (int)float.Ceiling(center.Y + radius);
+
+        for (var x = x0; x <= x1; x++)
+        {
+            for (var y = y0; y <= y1; y++)
+            {
+                if (IsInsideCircle(center, new(x, y), radius))
+                {
+                    var pixelColor = bitmap.GetPixel(x, y);
+                    max = float.Max(pixelColor.R, max);
+                    max = float.Max(pixelColor.G, max);
+                    max = float.Max(pixelColor.B, max);
+                }
+            }
+        }
+        return max / 255f;
     }
 
     public static bool IsInsideCircle(Vector2 center, Vector2 pos, float radius)
