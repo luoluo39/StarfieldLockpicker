@@ -1,8 +1,6 @@
 ﻿using System.Drawing.Imaging;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using PInvoke;
-using Vortice.DirectInput;
 
 namespace StarfieldLockpicker;
 
