@@ -71,16 +71,19 @@ public class AppConfig
     public float CircleRadius0 { get; set; } = 205;
     public float CircleRadius1 { get; set; } = 168;
     public float CircleRadius2 { get; set; } = 135;
+    public float CircleRadius3 { get; set; } = 105;
     public float CircleRadiusKey { get; set; } = 240;
 
     public float SampleRadius0 { get; set; } = 10;
     public float SampleRadius1 { get; set; } = 10;
     public float SampleRadius2 { get; set; } = 10;
+    public float SampleRadius3 { get; set; } = 5;
     public float SampleRadiusKey { get; set; } = 7;
 
     public float SampleThr0 { get; set; } = 80;
     public float SampleThr1 { get; set; } = 40;
     public float SampleThr2 { get; set; } = 40;
+    public float SampleThr3 { get; set; } = 41;
     public float SampleThrKey { get; set; } = 80;
 
     public int KeyAreaX0 { get; set; } = 1333;

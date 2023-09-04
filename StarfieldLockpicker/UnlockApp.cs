@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using StarfieldLockpicker.Inputs;
 
@@ -101,7 +102,9 @@ public class UnlockApp : IDisposable
         await Task.Delay(50);
         //insert keys
         int cursorPos = 0;
-        for (var level = 0; level < 3; level++)
+
+        var maxLevel = result.Max(t => t.Level);
+        for (var level = 0; level <= maxLevel; level++)
         {
             var lvl = level;
             var remains = result.Count(t => t.Level == lvl);
@@ -191,21 +194,25 @@ public class UnlockApp : IDisposable
                 throw new Exception();
         }
 
-        uint[] lockShapes = new uint[3];
+        uint[] lockShapes = new uint[4];
         {
             var shape0 = GetShape32(firstImage, config.CircleRadius0, config.SampleRadius0, config.SampleThr0);
             var shape1 = GetShape32(firstImage, config.CircleRadius1, config.SampleRadius1, config.SampleThr1);
             var shape2 = GetShape32(firstImage, config.CircleRadius2, config.SampleRadius2, config.SampleThr2);
+            var shape3 = GetShape32(firstImage, config.CircleRadius3, config.SampleRadius3, config.SampleThr3);
             if (shape0 == 0)
                 shape0 = uint.MaxValue;
             if (shape1 == 0)
                 shape1 = uint.MaxValue;
             if (BitOperations.PopCount(shape2) < 10)
                 shape2 = uint.MaxValue;
+            if (BitOperations.PopCount(shape3) < 10)
+                shape3 = uint.MaxValue;
 
             lockShapes[0] = shape0;
             lockShapes[1] = shape1;
             lockShapes[2] = shape2;
+            lockShapes[3] = shape3;
         }
 
         firstImage.Dispose();
@@ -256,53 +263,70 @@ public class UnlockApp : IDisposable
         Console.WriteLine();
     }
 
-    private static KeyLevelRot[]? FindFirstSolve(ReadOnlySpan<uint> locks, ReadOnlySpan<uint> keys, List<KeyLevelRot>[] keyPositionsArray)
+    private static KeyLevelRot[]? FindFirstSolve(uint[] locks, uint[] keys, List<KeyLevelRot>[] keyPositionsArray)
     {
-        var result = new KeyLevelRot[keys.Length];
         var dims = keyPositionsArray.Select(t => t.Count).ToImmutableArray();
         var maxExclusive = dims.Aggregate(1UL, (a, b) => a * (ulong)b);
+
+        const int chunkSize = 65536;
+        var chunkCount = (uint)(maxExclusive / chunkSize + ((maxExclusive % chunkSize > 0) ? 1UL : 0UL));
+
         Console.WriteLine($"combination count:{maxExclusive}");
-        Span<int> index = stackalloc int[keyPositionsArray.Length];
-        Span<uint> playground = stackalloc uint[locks.Length];
+        Console.WriteLine($"chunk count:{chunkCount}");
 
-        for (ulong comb = 0; comb < maxExclusive; comb++)
+        StrongBox<KeyLevelRot[]?> resultBox = new(null);
+        Parallel.For(0, chunkCount, (ci, s) =>
         {
-            locks.CopyTo(playground);
+            Span<int> index = stackalloc int[keyPositionsArray.Length];
+            Span<uint> playground = stackalloc uint[locks.Length];
 
-            Utility.ExtractIndexes(comb, index, dims.AsSpan());
-            int keyIndex;
-            for (keyIndex = 0; keyIndex < index.Length; keyIndex++)
+            var from = (ulong)ci * chunkSize;
+            var to = Math.Min(maxExclusive, from + chunkSize);
+
+            for (ulong comb = from; comb < to; comb++)
             {
-                var key = keys[keyIndex];
-                var keyPlaces = keyPositionsArray[keyIndex];
+                locks.CopyTo(playground);
 
-                var (level, rot) = keyPlaces[index[keyIndex]];
-
-                if (level < 0)
-                    continue;
-
-                var toInsert = uint.RotateLeft(key, rot);
-
-                if ((playground[level] & toInsert) != 0)
-                    break;
-
-                playground[level] |= toInsert;
-            }
-
-            //if break in for loop
-            if (keyIndex != index.Length) continue;
-
-            if (Utility.CheckAllBitSet(playground))
-            {
+                Utility.ExtractIndexes(comb, index, dims.AsSpan());
+                int keyIndex;
                 for (keyIndex = 0; keyIndex < index.Length; keyIndex++)
                 {
-                    result[keyIndex] = keyPositionsArray[keyIndex][index[keyIndex]];
+                    var key = keys[keyIndex];
+                    var keyPlaces = keyPositionsArray[keyIndex];
+
+                    var (level, rot) = keyPlaces[index[keyIndex]];
+
+                    if (level < 0)
+                        continue;
+
+                    var toInsert = uint.RotateLeft(key, rot);
+
+                    if ((playground[level] & toInsert) != 0)
+                        break;
+
+                    playground[level] |= toInsert;
                 }
-                //we need only the first result
-                return result;
+
+                //if break in for loop
+                if (keyIndex != index.Length) continue;
+
+                if (Utility.CheckAllBitSet(playground))
+                {
+                    var result = new KeyLevelRot[keys.Length];
+                    for (keyIndex = 0; keyIndex < index.Length; keyIndex++)
+                    {
+                        result[keyIndex] = keyPositionsArray[keyIndex][index[keyIndex]];
+                    }
+                    //we need only the first result
+                    if (null == Interlocked.CompareExchange(ref resultBox.Value, result, null))
+                        s.Break();
+                    return;
+                }
             }
-        }
-        return null;
+        });
+
+
+        return resultBox.Value;
     }
 
     public void Dispose()
