@@ -87,8 +87,8 @@ public static class Utility
         var x0 = ScaleWidth(config.KeyAreaX0);
         var y0 = ScaleHeight(config.KeyAreaY0);
 
-        var x1 = x0 + ScaleWidth(config.KeyAreaWidth);
-        var y1 = y0 + ScaleWidth(config.KeyAreaHeight);
+        var x1 = ScaleWidth(config.KeyAreaX0 + config.KeyAreaWidth);
+        var y1 = ScaleHeight(config.KeyAreaY0 + config.KeyAreaHeight);
 
         unsafe
         {
