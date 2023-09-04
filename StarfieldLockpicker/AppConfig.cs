@@ -91,6 +91,8 @@ public class AppConfig
     public int ReferenceResolutionWidth { get; set; } = 1920;
     public int ReferenceResolutionHeight { get; set; } = 1080;
 
+    public double ImageMseThr { get; set; } = 45;
+
     public int Display { get; set; } = 0;
 
     [JsonIgnore]
