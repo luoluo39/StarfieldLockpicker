@@ -15,7 +15,7 @@ public class MessageWindow : Form
         if (!Utility.RegisterHotKey(Handle, 0, 0, (int)vk))
         {
             Utility.UnregisterHotKey(IntPtr.Zero, 0);
-            Console.WriteLine($"The hotkey {vk} is in use!");
+            Console.WriteLine($"The hotkey {vk} is in use! this may caused by other programs with same key, or running more than one instance of this program. try close all instances, wait for several seconds, and start again, or change hotkey in config");
         }
     }
 

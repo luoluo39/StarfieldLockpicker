@@ -6,6 +6,7 @@ using System.Drawing.Imaging;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using PInvoke;
 using StarfieldLockpicker.Inputs;
 
 namespace StarfieldLockpicker;
