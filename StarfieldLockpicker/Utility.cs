@@ -15,8 +15,7 @@ public static class Utility
 
     public static Vector2 ScalePosition(Vector2 value)
     {
-        var config = AppConfig.Instance;
-        return value * config.ScreenSizeVector / new Vector2(config.ReferenceResolutionWidth, config.ReferenceResolutionHeight);
+        return new(ScaleFloatPositionX(value.X), ScaleFloatPositionY(value.Y));
     }
 
     public static float ScaleRadius(float value)
@@ -24,14 +23,14 @@ public static class Utility
         return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight;
     }
 
-    public static int ScaleWidth(int value)
+    public static float ScaleFloatPositionX(float value)
     {
         return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight +
-               (AppConfig.Instance.ScreenWidth - AppConfig.Instance.ReferenceResolutionWidth *
+               (AppConfig.Instance.ScreenWidth - (float)AppConfig.Instance.ReferenceResolutionWidth *
                    AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight) / 2;
     }
 
-    public static int ScaleHeight(int value)
+    public static float ScaleFloatPositionY(float value)
     {
         return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight;
     }
@@ -84,11 +83,11 @@ public static class Utility
 
         var config = AppConfig.Instance;
 
-        var x0 = ScaleWidth(config.KeyAreaX0);
-        var y0 = ScaleHeight(config.KeyAreaY0);
+        var x0 = (int)ScaleFloatPositionX(config.KeyAreaX0);
+        var y0 = (int)ScaleFloatPositionY(config.KeyAreaY0);
 
-        var x1 = ScaleWidth(config.KeyAreaX0 + config.KeyAreaWidth);
-        var y1 = ScaleHeight(config.KeyAreaY0 + config.KeyAreaHeight);
+        var x1 = (int)ScaleFloatPositionX(config.KeyAreaX0 + config.KeyAreaWidth);
+        var y1 = (int)ScaleFloatPositionY(config.KeyAreaY0 + config.KeyAreaHeight);
 
         unsafe
         {
