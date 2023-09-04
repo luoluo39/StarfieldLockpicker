@@ -21,7 +21,7 @@ public static class Utility
 
     public static float ScaleRadius(float value)
     {
-        return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ScreenHeight;
+        return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight;
     }
 
     public static int ScaleWidth(int value)
@@ -108,7 +108,7 @@ public static class Utility
         bmp1.UnlockBits(data1);
         bmp2.UnlockBits(data2);
 
-        double msePerPixel = mse / (width * height * 3.0 / 2);
+        double msePerPixel = mse / ((x1 - x0) * (y1 - y0) * 3.0);
         return msePerPixel;
     }
 
