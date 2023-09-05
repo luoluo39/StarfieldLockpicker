@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -95,12 +96,13 @@ public class UnlockApp : IDisposable
         while (true)
         {
             var selected = GetSelectedKeyIndex(keySelectionImages, out var image);
-            Utility.ConsoleDebug($"Selected: {selected}:{result[selected].Level}");
+            Utility.ConsoleDebug($"Selected: {selected}:{result[selected].Level} current level: {currentLevel}");
 
             //pre-insert check
             //var key = result[selected];
             if (result[selected].Level == currentLevel)
             {
+                Utility.ConsoleDebug($"Inserting: {selected}:{result[selected].Level}");
                 //var lockShape = GradGetLockShape32(image, currentLevel);
                 //var keyShape = GetKeyShape32(image);
                 //var assumedKeyShape = uint.RotateLeft(key.InitialShape, key.Rotation);
@@ -141,28 +143,43 @@ public class UnlockApp : IDisposable
 
     private async Task InsertKeyAsync(Bitmap? beforeInsert)
     {
-        int counter = 0;
         beforeInsert ??= Utility.CaptureScreen(config.Display);
-        Bitmap afterAction;
-        do
+
+        for (int i = 0; i < 5; i++)
         {
-            if (counter >= 1)
-            {
-                Utility.ConsoleWarning("Failed to insert once.");
-            }
-            if (counter > 10)
-            {
-                Utility.ConsoleError("Failed to insert too many times.");
-                throw new Exception();
-            }
-
             Input.KeyboardKeyClick(VKCode.E, 50);
-            await Task.Delay(50);
+            await Task.Delay(100);
 
-            afterAction = Utility.CaptureScreen(config.Display);
-            counter++;
+            Utility.ConsoleDebug("Insert command sent, waiting for 1000ms.");
+            var success = await DoWaitingAsync(() =>
+            {
+                using var currentImage = Utility.CaptureScreen(config.Display);
+                return Utility.CalculateKeyAreaMSE(currentImage, beforeInsert) >= config.ImageMseThr;
+            }, 50, 1000);
 
-        } while (Utility.CalculateKeyAreaMSE(beforeInsert, afterAction) < config.ImageMseThr);
+            if (success)
+                return;
+
+            Utility.ConsoleWarning($"insert timeout, retrying {i}/5");
+        }
+
+
+        Utility.ConsoleError("insert timeout. terminating");
+        throw new Exception();
+    }
+
+    private static async Task<bool> DoWaitingAsync(Func<bool> condition, int delay, float timeout)
+    {
+        var begin = Stopwatch.GetTimestamp();
+        while (true)
+        {
+            await Task.Delay(delay);
+            if (condition()) return true;
+
+            var time = Stopwatch.GetElapsedTime(begin);
+            if (time.TotalMilliseconds > timeout)
+                return false;
+        }
     }
 
     private async Task RotateKeyAsync(KeyLevelRot key)
@@ -180,13 +197,28 @@ public class UnlockApp : IDisposable
             rot = GetDeltaRotate(current, rotated);
             if (rot == 0)
                 break;
+
+            Utility.ConsoleWarning("Warning: key is not rotated to position or shape does not match. waiting for 1000ms.");
+
+            StrongBox<int> rotBox = new();
+            var success = await DoWaitingAsync(() =>
+                {
+                    var current = GetKeyShape32();
+                    rotBox.Value = GetDeltaRotate(current, rotated);
+                    return rotBox.Value == 0;
+                }, 50, 1000);
+
+            if (success)
+                break;
+            rot = rotBox.Value;
+
             if (rot == -1)
             {
                 Utility.ConsoleError("Key shape do not match, what is happening?");
                 throw new Exception();
             }
 
-            Utility.ConsoleWarning("Warning: key is not rotated to position. trying to fix.");
+            Utility.ConsoleWarning($"Warning: key is not rotated to position. retrying {counter / 10}.");
 
             if (counter > 10)
             {
@@ -209,9 +241,27 @@ public class UnlockApp : IDisposable
                 break;
 
             if (times != 0)
-                Utility.ConsoleWarning("Warning: not selecting key.trying to fix.");
+            {
+                if (times % 2 == 1)
+                {
+                    Utility.ConsoleWarning(
+                        $"Warning: key is not selected, waiting for 1000ms. current={actualKeyIndex} dest={keyIndex} delta={delta}");
+
+                    var success = await DoWaitingAsync(() => keyIndex == GetSelectedKeyIndex(keySelectionImages), 50, 1000);
+
+                    if (success)
+                        break;
+                    times++;
+                    continue;
+                }
+                Utility.ConsoleWarning(
+                    $"Warning: failed to select key, retrying. current={actualKeyIndex} dest={keyIndex} delta={delta}");
+            }
             if (times > 5)
-                Utility.ConsoleWarning("Failed to select the key, too many times.");
+            {
+                Utility.ConsoleError("Failed to select the key, too many times.");
+                throw new Exception();
+            }
 
             for (int i = 0; i < Math.Abs(delta); i++)
             {
@@ -224,11 +274,13 @@ public class UnlockApp : IDisposable
 
             times++;
         }
+        Utility.ConsoleDebug($"Selected key {keyIndex}");
     }
 
     private int GetSelectedKeyIndex(Bitmap[] keySelectionImages)
     {
         using var image = Utility.CaptureScreen(config.Display);
+
         return keySelectionImages.Select((t, i) => (t, i)).MinBy(t => Utility.CalculateKeyAreaMSE(image, t.t)).i;
     }
     private int GetSelectedKeyIndex(Bitmap[] keySelectionImages, out Bitmap image)
@@ -266,6 +318,7 @@ public class UnlockApp : IDisposable
                 await Task.Delay(20);
             }
         }
+        await Task.Delay(100);
     }
 
     private static List<KeyLevelRot>[] FindKeyPositions(uint[] keys, uint[] levels)
@@ -314,13 +367,7 @@ public class UnlockApp : IDisposable
                         Utility.ConsoleError("Image seems to be frozen. Are you really running this in game?");
                         throw new Exception();
                     }
-                    else
-                    {
-                        Utility.ConsoleWarning("Image not changed");
-                    }
-
-                    Input.KeyboardKeyClick(VKCode.T, 50);
-                    await Task.Delay(50);
+                    Utility.ConsoleWarning("Image not changed");
                     image.Dispose();
                     continue;
                 }
@@ -338,7 +385,7 @@ public class UnlockApp : IDisposable
             keyShapes.Add((shape, image));
 
             Input.KeyboardKeyClick(VKCode.T, 50);
-            await Task.Delay(50);
+            await Task.Delay(100);
 
             if (counter++ > 20)
             {
@@ -528,8 +575,8 @@ public class UnlockApp : IDisposable
                 continue;
             }
 
-            if(keyLevelRot.Level>=0)
-            pg[keyLevelRot.Level] |= rotated;
+            if (keyLevelRot.Level >= 0)
+                pg[keyLevelRot.Level] |= rotated;
 
             if (pos == keyPositionsArray.Length - 1)
             {

@@ -84,7 +84,7 @@ public class AppConfig
     public float SampleThr1 { get; set; } = 0.05f;
     public float SampleThr2 { get; set; } = 0.05f;
     public float SampleThr3 { get; set; } = 0.05f;
-    public float SampleThrKey { get; set; } = 0.175f;
+    public float SampleThrKey { get; set; } = 0.5f;
 
     public int KeyAreaX0 { get; set; } = 1333;
     public int KeyAreaY0 { get; set; } = 130;
