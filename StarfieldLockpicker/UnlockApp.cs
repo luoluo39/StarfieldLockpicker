@@ -95,36 +95,45 @@ public class UnlockApp : IDisposable
         while (true)
         {
             var selected = GetSelectedKeyIndex(keySelectionImages, out var image);
+            Utility.ConsoleDebug($"Selected: {selected}:{result[selected].Level}");
 
             //pre-insert check
-            var key = result[selected];
-            var lockShape = GradGetLockShape32(image, currentLevel);
-            var keyShape = GetKeyShape32(image);
-            var assumedKeyShape = uint.RotateLeft(key.InitialShape, key.Rotation);
-
-            if (assumedKeyShape != keyShape)
-            {
-                Utility.ConsoleError("keyShape not equals to assumed");
-                throw new Exception();
-            }
-            if ((keyShape & lockShape) != 0)
-            {
-                Utility.ConsoleError("key can not be inserted into lock");
-                throw new Exception();
-            }
-
+            //var key = result[selected];
             if (result[selected].Level == currentLevel)
             {
+                //var lockShape = GradGetLockShape32(image, currentLevel);
+                //var keyShape = GetKeyShape32(image);
+                //var assumedKeyShape = uint.RotateLeft(key.InitialShape, key.Rotation);
+
+                //if (assumedKeyShape != keyShape)
+                //{
+                //    Utility.ConsoleError("keyShape not equals to assumed");
+                //    Utility.ConsoleDebug($"{keyShape} -- {assumedKeyShape}");
+                //    throw new Exception();
+                //}
+
+                //if ((keyShape & lockShape) != 0)
+                //{
+                //    Utility.ConsoleError("key can not be inserted into lock");
+                //    throw new Exception();
+                //}
                 await InsertKeyAsync(image);
                 if (--remains == 0)
                 {
                     Utility.ConsoleInfo($"Finish Level {currentLevel}");
                     currentLevel++;
-                    if (currentLevel >= maxLevel)
+                    if (currentLevel > maxLevel)
                         break;
+                    remains = result.Count(t => t.Level == currentLevel);
+                    await Task.Delay(1200);
                 }
             }
+            else
+            {
+                Input.KeyboardKeyClick(VKCode.T, 50);
+            }
 
+            await Task.Delay(100);
             image.Dispose();
         }
         Utility.ConsoleInfo($"Finish All Levels");
@@ -246,7 +255,7 @@ public class UnlockApp : IDisposable
             for (int j = 0; j < 32 - r; j++)
             {
                 Input.KeyboardKeyClick(VKCode.A, 50);
-                await Task.Delay(50);
+                await Task.Delay(20);
             }
         }
         else
@@ -254,7 +263,7 @@ public class UnlockApp : IDisposable
             for (int j = 0; j < r; j++)
             {
                 Input.KeyboardKeyClick(VKCode.D, 50);
-                await Task.Delay(50);
+                await Task.Delay(20);
             }
         }
     }
@@ -289,18 +298,15 @@ public class UnlockApp : IDisposable
         List<(uint, Bitmap)> keyShapes = new();
 
         int counter = 0;
-        int tryCounter = 10;
+        int tryCounter = 5;
         while (true)
         {
             var image = Utility.CaptureScreen(config.Display);
             //keys are fine with old method
-            var shape = GetShape32(image, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey, config.PrintMaxColorKey);
             if (keyShapes.Count > 0)
             {
-                //last image should also be not null
-
-                //this is same image, but game miss the input
                 var mse0 = Utility.CalculateKeyAreaMSE(image, keyShapes.Last().Item2);
+                //this is same image, but game miss the input
                 if (mse0 < AppConfig.Instance.ImageMseThr)
                 {
                     if (tryCounter-- <= 0)
@@ -308,9 +314,14 @@ public class UnlockApp : IDisposable
                         Utility.ConsoleError("Image seems to be frozen. Are you really running this in game?");
                         throw new Exception();
                     }
+                    else
+                    {
+                        Utility.ConsoleWarning("Image not changed");
+                    }
 
                     Input.KeyboardKeyClick(VKCode.T, 50);
                     await Task.Delay(50);
+                    image.Dispose();
                     continue;
                 }
 
@@ -320,10 +331,10 @@ public class UnlockApp : IDisposable
                 if (mse < AppConfig.Instance.ImageMseThr)
                     break;
 
-                image.Dispose();
-                tryCounter = 0;
+                tryCounter = 5;
             }
-
+            var shape = GetShape32(image, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey, config.PrintMaxColorKey);
+            Utility.ConsoleInfo($"captured key {keyShapes.Count}");
             keyShapes.Add((shape, image));
 
             Input.KeyboardKeyClick(VKCode.T, 50);
@@ -360,11 +371,15 @@ public class UnlockApp : IDisposable
                 shape2 = uint.MaxValue;
                 Utility.ConsoleWarning("Warning: less than 10 but not 0 detect for layer 2.");
             }
+            if (shape2 == 0)
+                shape2 = uint.MaxValue;
             if (BitOperations.PopCount(shape3) < 10 && shape3 != 0)
             {
                 shape3 = uint.MaxValue;
                 Utility.ConsoleWarning("Warning: less than 10 but not 0 detect for layer 3.");
             }
+            if (shape3 == 0)
+                shape3 = uint.MaxValue;
 
             lockShapes[0] = shape0;
             lockShapes[1] = shape1;
