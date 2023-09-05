@@ -43,6 +43,19 @@ public static class Utility
         return captureBitmap;
     }
 
+    public static Bitmap CaptureScreenArea(int display, Rectangle rect)
+    {
+        var bounds = Screen.AllScreens[display].Bounds;
+        var w = Math.Min(rect.Width, bounds.Width - rect.Left);
+        var h = Math.Min(rect.Height, bounds.Height - rect.Top);
+        var captureRectangle = new Rectangle(bounds.Left, bounds.Top, w, h);
+
+        var captureBitmap = new Bitmap(rect.Size.Width, rect.Size.Height, PixelFormat.Format32bppArgb);
+        var captureGraphics = Graphics.FromImage(captureBitmap);
+        captureGraphics.CopyFromScreen(captureRectangle.Left, captureRectangle.Top, 0, 0, captureRectangle.Size);
+        return captureBitmap;
+    }
+
     public static void ExtractIndexes(ulong number, Span<int> index, ReadOnlySpan<int> dims)
     {
         if (index.Length != dims.Length)
@@ -98,6 +111,7 @@ public static class Utility
                     var ptr2 = (byte*)data2.Scan0 + (data2.Stride * y + x * 4);
                     for (int i = 1; i < 4; i++) // 4 bytes per pixel (ARGB)
                     {
+                        //They may lied. is it actually BGRA?
                         int diff = ptr1[i] - ptr2[i];
                         mse += diff * diff;
                     }
@@ -166,4 +180,31 @@ public static class Utility
         return Vector2.DistanceSquared(center, pos) <= radius * radius;
     }
 
+    public static void ConsoleError(string str)
+    {
+        Console.ForegroundColor = ConsoleColor.DarkRed;
+        Console.WriteLine(str);
+        Console.ResetColor();
+    }
+
+    public static void ConsoleWarning(string str)
+    {
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        Console.WriteLine(str);
+        Console.ResetColor();
+    }
+
+    public static void ConsoleInfo(string str)
+    {
+        Console.ForegroundColor = ConsoleColor.Gray;
+        Console.WriteLine(str);
+        Console.ResetColor();
+    }
+
+    public static void ConsoleDebug(string str)
+    {
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine(str);
+        Console.ResetColor();
+    }
 }

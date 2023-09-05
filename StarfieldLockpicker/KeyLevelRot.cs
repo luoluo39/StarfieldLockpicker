@@ -1,3 +1,3 @@
 ﻿namespace StarfieldLockpicker;
 
-readonly record struct KeyLevelRot(int Level, int Rotation);
+readonly record struct KeyLevelRot(uint InitialShape, int Level, int Rotation);

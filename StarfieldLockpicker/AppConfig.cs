@@ -74,16 +74,16 @@ public class AppConfig
     public float CircleRadius3 { get; set; } = 105;
     public float CircleRadiusKey { get; set; } = 240;
 
-    public float SampleRadius0 { get; set; } = 10;
-    public float SampleRadius1 { get; set; } = 10;
-    public float SampleRadius2 { get; set; } = 10;
-    public float SampleRadius3 { get; set; } = 5;
+    public float SampleRadius0 { get; set; } = 2f;
+    public float SampleRadius1 { get; set; } = 2f;
+    public float SampleRadius2 { get; set; } = 2f;
+    public float SampleRadius3 { get; set; } = 2f;
     public float SampleRadiusKey { get; set; } = 7;
 
-    public float SampleThr0 { get; set; } = 0.175f;
-    public float SampleThr1 { get; set; } = 0.175f;
-    public float SampleThr2 { get; set; } = 0.175f;
-    public float SampleThr3 { get; set; } = 0.175f;
+    public float SampleThr0 { get; set; } = 0.05f;
+    public float SampleThr1 { get; set; } = 0.05f;
+    public float SampleThr2 { get; set; } = 0.05f;
+    public float SampleThr3 { get; set; } = 0.05f;
     public float SampleThrKey { get; set; } = 0.175f;
 
     public int KeyAreaX0 { get; set; } = 1333;
@@ -100,10 +100,10 @@ public class AppConfig
 
     public string HotKey { get; set; } = "F10";
 
-    public bool PrintMaxColor0 { get; set; } = true;
-    public bool PrintMaxColor1 { get; set; } = true;
-    public bool PrintMaxColor2 { get; set; } = true;
-    public bool PrintMaxColor3 { get; set; } = true;
+    public bool PrintMaxColor0 { get; set; } = false;
+    public bool PrintMaxColor1 { get; set; } = false;
+    public bool PrintMaxColor2 { get; set; } = false;
+    public bool PrintMaxColor3 { get; set; } = false;
     public bool PrintMaxColorKey { get; set; } = false;
 
     [JsonIgnore]

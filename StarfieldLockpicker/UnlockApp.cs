@@ -48,95 +48,215 @@ public class UnlockApp : IDisposable
     [SuppressMessage("ReSharper", "MethodSupportsCancellation")]
     private async Task UnlockAsync(CancellationToken cancellationToken)
     {
-        Console.WriteLine("Begin");
+        Utility.ConsoleInfo("Begin");
         //first we get a image of each level of the lock (and also the first key)
-        var (keys, locks) = await CaptureLockAndKeys();
+        var (keys, keySelectionImages, locks) = await CaptureLockAndKeys();
 
         //to reduce search range, we find every possible position of each key
-        Console.WriteLine("Captured");
+        Utility.ConsoleInfo("Captured");
         var keyPositions = FindKeyPositions(keys, locks);
 
         //pick one pos for each key, and find the first solve
-        var result = FindFirstSolve(locks, keys, keyPositions);
+        var result = FindFirstSolve(locks, keyPositions);
         if (result is null)
         {
-            Console.WriteLine("No solve, maybe try again?");
+            Utility.ConsoleWarning("No solve, maybe try again?");
             return;
         }
 
-        Console.WriteLine("first solve:");
-        foreach (var (level, rotation) in result)
+        Utility.ConsoleInfo("first solve:");
+        foreach (var (_, level, rotation) in result)
         {
-            Console.WriteLine($"Level: {level}, Rot:{rotation / 2}");
+            Utility.ConsoleInfo($"Level: {level}, Rot:{rotation / 2}");
         }
 
         await Task.Delay(50);
 
         //rotate each key to the calculated position
-        await RotateAndInsertKeys(result);
+        await RotateAndInsertKeys(result, keySelectionImages);
+
+        foreach (var image in keySelectionImages)
+        {
+            image.Dispose();
+        }
     }
 
-    private static async Task RotateAndInsertKeys(KeyLevelRot[] result)
+    private async Task RotateAndInsertKeys(KeyLevelRot[] result, Bitmap[] keySelectionImages)
     {
-        foreach (var t in result)
+        for (var keyIndex = 0; keyIndex < result.Length; keyIndex++)
         {
-            if (t.Rotation > 16)
-            {
-                for (int j = 0; j < 32 - t.Rotation; j++)
-                {
-                    Input.KeyboardKeyClick(VKCode.A, 50);
-                    await Task.Delay(50);
-                }
-            }
-            else
-            {
-                for (int j = 0; j < t.Rotation; j++)
-                {
-                    Input.KeyboardKeyClick(VKCode.D, 50);
-                    await Task.Delay(50);
-                }
-            }
-
-            Input.KeyboardKeyClick(VKCode.T, 50);
-            await Task.Delay(50);
+            await SelectKeyAsync(keySelectionImages, keyIndex);
+            await RotateKeyAsync(result[keyIndex]);
         }
 
-        await Task.Delay(50);
-        //insert keys
-        int cursorPos = 0;
-
+        var currentLevel = 0;
+        var remains = result.Count(t => t.Level == currentLevel);
         var maxLevel = result.Max(t => t.Level);
-        for (var level = 0; level <= maxLevel; level++)
+        while (true)
         {
-            var lvl = level;
-            var remains = result.Count(t => t.Level == lvl);
-            while (remains > 0)
-            {
-                var keyLevel = result[cursorPos].Level;
-                if (keyLevel == level)
-                {
-                    Input.KeyboardKeyClick(VKCode.E, 50);
-                    remains--;
-                }
-                else if (keyLevel > level || keyLevel == -1)
-                {
-                    //manual bypass
-                    Input.KeyboardKeyClick(VKCode.T, 50);
-                }
-                else if (keyLevel < level)
-                {
-                    //auto bypass
-                }
+            var selected = GetSelectedKeyIndex(keySelectionImages, out var image);
 
-                await Task.Delay(50);
-                cursorPos = (cursorPos + 1) % result.Length;
+            //pre-insert check
+            var key = result[selected];
+            var lockShape = GradGetLockShape32(image, currentLevel);
+            var keyShape = GetKeyShape32(image);
+            var assumedKeyShape = uint.RotateLeft(key.InitialShape, key.Rotation);
+
+            if (assumedKeyShape != keyShape)
+            {
+                Utility.ConsoleError("keyShape not equals to assumed");
+                throw new Exception();
+            }
+            if ((keyShape & lockShape) != 0)
+            {
+                Utility.ConsoleError("key can not be inserted into lock");
+                throw new Exception();
             }
 
-            await Task.Delay(1200);
-            Console.WriteLine($"Finish Level {level}");
-        }
+            if (result[selected].Level == currentLevel)
+            {
+                await InsertKeyAsync(image);
+                if (--remains == 0)
+                {
+                    Utility.ConsoleInfo($"Finish Level {currentLevel}");
+                    currentLevel++;
+                    if (currentLevel >= maxLevel)
+                        break;
+                }
+            }
 
-        Console.WriteLine($"Finish All Levels");
+            image.Dispose();
+        }
+        Utility.ConsoleInfo($"Finish All Levels");
+    }
+
+    private async Task InsertKeyAsync(Bitmap? beforeInsert)
+    {
+        int counter = 0;
+        beforeInsert ??= Utility.CaptureScreen(config.Display);
+        Bitmap afterAction;
+        do
+        {
+            if (counter >= 1)
+            {
+                Utility.ConsoleWarning("Failed to insert once.");
+            }
+            if (counter > 10)
+            {
+                Utility.ConsoleError("Failed to insert too many times.");
+                throw new Exception();
+            }
+
+            Input.KeyboardKeyClick(VKCode.E, 50);
+            await Task.Delay(50);
+
+            afterAction = Utility.CaptureScreen(config.Display);
+            counter++;
+
+        } while (Utility.CalculateKeyAreaMSE(beforeInsert, afterAction) < config.ImageMseThr);
+    }
+
+    private async Task RotateKeyAsync(KeyLevelRot key)
+    {
+        var (initialShape, _, rotation) = key;
+
+        var rotated = uint.RotateLeft(initialShape, rotation);
+        var rot = rotation;
+        int counter = 0;
+        while (true)
+        {
+            await Rotate(rot);
+
+            var current = GetKeyShape32();
+            rot = GetDeltaRotate(current, rotated);
+            if (rot == 0)
+                break;
+            if (rot == -1)
+            {
+                Utility.ConsoleError("Key shape do not match, what is happening?");
+                throw new Exception();
+            }
+
+            Utility.ConsoleWarning("Warning: key is not rotated to position. trying to fix.");
+
+            if (counter > 10)
+            {
+                Utility.ConsoleError("Failed to rotate key to position, too many times.");
+                throw new Exception();
+            }
+            counter++;
+        }
+    }
+
+    private async Task SelectKeyAsync(Bitmap[] keySelectionImages, int keyIndex)
+    {
+        int times = 0;
+        while (true)
+        {
+            var actualKeyIndex = GetSelectedKeyIndex(keySelectionImages);
+            var delta = keyIndex - actualKeyIndex;
+
+            if (delta == 0)
+                break;
+
+            if (times != 0)
+                Utility.ConsoleWarning("Warning: not selecting key.trying to fix.");
+            if (times > 5)
+                Utility.ConsoleWarning("Failed to select the key, too many times.");
+
+            for (int i = 0; i < Math.Abs(delta); i++)
+            {
+                if (delta > 0)
+                    Input.KeyboardKeyClick(VKCode.T, 50);
+                else
+                    Input.KeyboardKeyClick(VKCode.Q, 50);
+                await Task.Delay(50);
+            }
+
+            times++;
+        }
+    }
+
+    private int GetSelectedKeyIndex(Bitmap[] keySelectionImages)
+    {
+        using var image = Utility.CaptureScreen(config.Display);
+        return keySelectionImages.Select((t, i) => (t, i)).MinBy(t => Utility.CalculateKeyAreaMSE(image, t.t)).i;
+    }
+    private int GetSelectedKeyIndex(Bitmap[] keySelectionImages, out Bitmap image)
+    {
+        image = Utility.CaptureScreen(config.Display);
+        var img = image;
+        return keySelectionImages.Select((t, i) => (t, i)).MinBy(t => Utility.CalculateKeyAreaMSE(img, t.t)).i;
+    }
+
+    private int GetDeltaRotate(uint src, uint dst)
+    {
+        for (int i = 0; i < 32; i++)
+        {
+            if (uint.RotateLeft(src, i) == dst)
+                return i;
+        }
+        return -1;
+    }
+
+    private static async Task Rotate(int r)
+    {
+        if (r > 16)
+        {
+            for (int j = 0; j < 32 - r; j++)
+            {
+                Input.KeyboardKeyClick(VKCode.A, 50);
+                await Task.Delay(50);
+            }
+        }
+        else
+        {
+            for (int j = 0; j < r; j++)
+            {
+                Input.KeyboardKeyClick(VKCode.D, 50);
+                await Task.Delay(50);
+            }
+        }
     }
 
     private static List<KeyLevelRot>[] FindKeyPositions(uint[] keys, uint[] levels)
@@ -146,7 +266,7 @@ public class UnlockApp : IDisposable
         {
             var keyShape = keys[i];
             var positions = keyPositions[i];
-            positions.Add(new(-1, 0));
+            positions.Add(new(keyShape, -1, 0));
             for (var k = 0; k < levels.Length; k++)
             {
                 for (var j = 0; j < 32; j++)
@@ -155,7 +275,7 @@ public class UnlockApp : IDisposable
                     if (0 == (rotated & levels[k]))
                     {
                         //no collision
-                        positions.Add(new(k, j));
+                        positions.Add(new(keyShape, k, j));
                     }
                 }
             }
@@ -164,90 +284,93 @@ public class UnlockApp : IDisposable
         return keyPositions;
     }
 
-    private async Task<(uint[] keys, uint[] levels)> CaptureLockAndKeys()
+    private async Task<(uint[] keys, Bitmap[] keyShapes, uint[] levels)> CaptureLockAndKeys()
     {
-        List<uint> keyShapes = new();
+        List<(uint, Bitmap)> keyShapes = new();
 
         int counter = 0;
-        Bitmap? firstImage = null;
-        Bitmap? lastImage = null;
+        int tryCounter = 10;
         while (true)
         {
             var image = Utility.CaptureScreen(config.Display);
+            //keys are fine with old method
             var shape = GetShape32(image, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey, config.PrintMaxColorKey);
-            if (firstImage is not null && lastImage is not null)
+            if (keyShapes.Count > 0)
             {
                 //last image should also be not null
 
                 //this is same image, but game miss the input
-                var mse0 = Utility.CalculateKeyAreaMSE(image, lastImage);
+                var mse0 = Utility.CalculateKeyAreaMSE(image, keyShapes.Last().Item2);
                 if (mse0 < AppConfig.Instance.ImageMseThr)
-                    continue;
+                {
+                    if (tryCounter-- <= 0)
+                    {
+                        Utility.ConsoleError("Image seems to be frozen. Are you really running this in game?");
+                        throw new Exception();
+                    }
 
-                var mse = Utility.CalculateKeyAreaMSE(image, firstImage);
-                Console.WriteLine($"image mse: {mse}");
+                    Input.KeyboardKeyClick(VKCode.T, 50);
+                    await Task.Delay(50);
+                    continue;
+                }
+
+                var mse = Utility.CalculateKeyAreaMSE(image, keyShapes.First().Item2);
+                Utility.ConsoleDebug($"image mse: {mse},{mse0}");
 
                 if (mse < AppConfig.Instance.ImageMseThr)
                     break;
 
                 image.Dispose();
+                tryCounter = 0;
             }
-            else
-                firstImage = image;
-            lastImage = image;
 
-            keyShapes.Add(shape);
+            keyShapes.Add((shape, image));
 
             Input.KeyboardKeyClick(VKCode.T, 50);
             await Task.Delay(50);
 
             if (counter++ > 20)
+            {
+                Utility.ConsoleError("Matching too many times! Terminating");
                 throw new Exception();
+            }
         }
-        lastImage.Dispose();
 
         uint[] lockShapes = new uint[4];
         {
-            var shape0 = GetShape32(firstImage,
-                config.CircleRadius0,
-                config.SampleRadius0,
-                config.SampleThr0,
-                config.PrintMaxColor0);
+            var firstImage = keyShapes.First().Item2;
+            var shape0 = GradGetLockShape32(firstImage, 0);
+            var shape1 = GradGetLockShape32(firstImage, 1);
+            var shape2 = GradGetLockShape32(firstImage, 2);
+            var shape3 = GradGetLockShape32(firstImage, 3);
 
-            var shape1 = GetShape32(firstImage,
-                config.CircleRadius1,
-                config.SampleRadius1,
-                config.SampleThr1,
-                config.PrintMaxColor1);
 
-            var shape2 = GetShape32(firstImage,
-                config.CircleRadius2,
-                config.SampleRadius2,
-                config.SampleThr2,
-                config.PrintMaxColor2);
-
-            var shape3 = GetShape32(firstImage,
-                config.CircleRadius3,
-                config.SampleRadius3,
-                config.SampleThr3,
-                config.PrintMaxColor3);
-
-            if (shape0 == 0)
+            if (BitOperations.PopCount(shape0) < 10)
+            {
                 shape0 = uint.MaxValue;
-            if (shape1 == 0)
+                Utility.ConsoleWarning("Warning: less than 10 detect for layer 0, this is not supposed to be happening");
+            }
+            if (BitOperations.PopCount(shape1) < 10)
+            {
                 shape1 = uint.MaxValue;
-            if (BitOperations.PopCount(shape2) < 10)
+                Utility.ConsoleWarning("Warning: less than 10 detect for layer 1, this is not supposed to be happening");
+            }
+            if (BitOperations.PopCount(shape2) < 10 && shape2 != 0)
+            {
                 shape2 = uint.MaxValue;
-            if (BitOperations.PopCount(shape3) < 10)
+                Utility.ConsoleWarning("Warning: less than 10 but not 0 detect for layer 2.");
+            }
+            if (BitOperations.PopCount(shape3) < 10 && shape3 != 0)
+            {
                 shape3 = uint.MaxValue;
+                Utility.ConsoleWarning("Warning: less than 10 but not 0 detect for layer 3.");
+            }
 
             lockShapes[0] = shape0;
             lockShapes[1] = shape1;
             lockShapes[2] = shape2;
             lockShapes[3] = shape3;
         }
-
-        firstImage.Dispose();
 
         Console.WriteLine("Lock shapes:");
         for (int i = 0; i < lockShapes.Length; i++)
@@ -260,10 +383,21 @@ public class UnlockApp : IDisposable
         for (int i = 0; i < keyShapes.Count; i++)
         {
             Console.Write($"  {i}: ");
-            ConsoleWriteShape32(keyShapes[i]);
+            ConsoleWriteShape32(keyShapes[i].Item1);
         }
 
-        return (keyShapes.ToArray(), lockShapes);
+        return (keyShapes.Select(t => t.Item1).ToArray(), keyShapes.Select(t => t.Item2).ToArray(), lockShapes);
+    }
+
+    private uint GetKeyShape32(Bitmap image)
+    {
+        return GetShape32(image, config.CircleRadiusKey, config.SampleRadiusKey, config.SampleThrKey, config.PrintMaxColorKey);
+    }
+
+    private uint GetKeyShape32()
+    {
+        using var image = Utility.CaptureScreen(config.Display);
+        return GetKeyShape32(image);
     }
 
     private uint GetShape32(Bitmap image, float circleRadius, float sampleRadius, float thr, bool print = false)
@@ -286,6 +420,61 @@ public class UnlockApp : IDisposable
             v |= gray > thr ? 1U << i : 0;
         }
         if (print) Console.WriteLine();
+
+        return v;
+    }
+
+    private uint GradGetLockShape32(Bitmap image, int layer)
+    {
+        var sp0 = (config.CircleRadius0 + config.CircleRadiusKey) / 2f;
+        var sp1 = (config.CircleRadius1 + config.CircleRadius0) / 2f;
+        var sp2 = (config.CircleRadius2 + config.CircleRadius1) / 2f;
+        var sp3 = (config.CircleRadius3 + config.CircleRadius2) / 2f;
+        var sp4 = 2 * sp3 - sp2;
+
+        return layer switch
+        {
+            0 => GradGetShape32(image, sp1, sp0, config.SampleRadius0, 10f, config.SampleThr0, config.PrintMaxColor0),
+            1 => GradGetShape32(image, sp2, sp1, config.SampleRadius1, 10f, config.SampleThr1, config.PrintMaxColor1),
+            2 => GradGetShape32(image, sp3, sp2, config.SampleRadius2, 10f, config.SampleThr2, config.PrintMaxColor2),
+            3 => GradGetShape32(image, sp4, sp3, config.SampleRadius3, 10f, config.SampleThr3, config.PrintMaxColor3),
+            _ => throw new ArgumentOutOfRangeException(nameof(layer))
+        };
+    }
+
+    private uint GradGetShape32(Bitmap image, float minRadius, float maxRadius, float sampleRadius, float stepLen, float thr, bool print = false)
+    {
+        var center = new Vector2(config.CircleCenterX, config.CircleCenterY);
+        var scaledCenter = Utility.ScalePosition(center);
+        var scaledMaxRadius = Utility.ScaleRadius(maxRadius);
+        var scaledMinRadius = Utility.ScaleRadius(minRadius);
+        var scaledStepLen = Utility.ScaleRadius(stepLen);
+        var scaledSampleRadius = Utility.ScaleRadius(sampleRadius);
+
+        uint v = 0;
+        for (var i = 0; i < 32; i++)
+        {
+            var x = 2 * float.Pi * i / 32;
+            var (sin, cos) = float.SinCos(x);
+
+            var last = float.NaN;
+            for (var s = scaledMinRadius; s < scaledMaxRadius; s += scaledStepLen)
+            {
+                var pos = new Vector2(cos, sin) * s + scaledCenter;
+                var current = Utility.CalculateMaxB(image, pos, scaledSampleRadius);
+
+                if (!float.IsNaN(last) && print)
+                {
+                    Console.WriteLine(current - last);
+                }
+                if (!float.IsNaN(last) && current - last >= thr)
+                {
+                    v |= 1U << i;
+                    break;
+                }
+                last = current;
+            }
+        }
 
         return v;
     }
@@ -344,7 +533,7 @@ public class UnlockApp : IDisposable
     //    }
     //}
 
-    private static KeyLevelRot[]? FindFirstSolve(uint[] locks, uint[] keys, List<KeyLevelRot>[] keyPositionsArray)
+    private static KeyLevelRot[]? FindFirstSolve(uint[] locks, List<KeyLevelRot>[] keyPositionsArray)
     {
         var dims = keyPositionsArray.Select(t => t.Count).ToImmutableArray();
         var maxExclusive = dims.Aggregate(1UL, (a, b) => a * (ulong)b);
@@ -372,10 +561,9 @@ public class UnlockApp : IDisposable
                 int keyIndex;
                 for (keyIndex = 0; keyIndex < index.Length; keyIndex++)
                 {
-                    var key = keys[keyIndex];
                     var keyPlaces = keyPositionsArray[keyIndex];
 
-                    var (level, rot) = keyPlaces[index[keyIndex]];
+                    var (key, level, rot) = keyPlaces[index[keyIndex]];
 
                     if (level < 0)
                         continue;
@@ -393,7 +581,7 @@ public class UnlockApp : IDisposable
 
                 if (Utility.CheckAllBitSet(playground))
                 {
-                    var result = new KeyLevelRot[keys.Length];
+                    var result = new KeyLevelRot[keyPositionsArray.Length];
                     for (keyIndex = 0; keyIndex < index.Length; keyIndex++)
                     {
                         result[keyIndex] = keyPositionsArray[keyIndex][index[keyIndex]];
