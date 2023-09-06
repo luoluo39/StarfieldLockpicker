@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using PInvoke;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -113,8 +114,15 @@ public class AppConfig
     public int ScreenHeight { get; private set; }
 
     [JsonIgnore]
-    public Vector2 ScreenSizeVector => new(ScreenWidth, ScreenHeight);
-
+    public float ReferenceUIScale => Math.Min(ReferenceResolutionWidth / 16f, ReferenceResolutionHeight / 9f);
     [JsonIgnore]
-    public Size ScreenSize => new(ScreenWidth, ScreenHeight);
+    public float ReferenceUIWidth => ReferenceUIScale * 16;
+    [JsonIgnore]
+    public float ReferenceUIHeight => ReferenceUIScale * 9;
+    [JsonIgnore]
+    public float ScreenUIScale => Math.Min(ScreenWidth / 16f, ScreenHeight / 9f);
+    [JsonIgnore]
+    public float ScreenUIWidth => ScreenUIScale * 16;
+    [JsonIgnore]
+    public float ScreenUIHeight => ScreenUIScale * 9;
 }

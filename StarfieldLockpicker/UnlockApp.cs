@@ -463,10 +463,10 @@ public class UnlockApp : IDisposable
             var shape2 = GradGetLockShape32(firstImage, 2);
             var shape3 = GradGetLockShape32(firstImage, 3);
 
-            if (shape0 == uint.Max())
+            if (shape0 == uint.MaxValue)
             {
                 shape0 = uint.MaxValue;
-                Utility.ConsoleWarning("Warning: less than 10 detect for layer 0, this is not supposed to be happening");
+                Utility.ConsoleWarning("Warning: the outmost layer is all bit set? this is not supposed to be happening.");
             }
             else if (BitOperations.PopCount(shape0) < 10)
             {
@@ -530,7 +530,7 @@ public class UnlockApp : IDisposable
     private uint GetShape32(Bitmap image, float circleRadius, float sampleRadius, float thr, bool print = false)
     {
         var center = new Vector2(config.CircleCenterX, config.CircleCenterY);
-        var scaledCenter = Utility.ScalePosition(center);
+        var scaledCenter = Utility.TranslatePosition(center);
         var scaledRadius = Utility.ScaleRadius(circleRadius);
         var scaledSampleRadius = Utility.ScaleRadius(sampleRadius);
 
@@ -572,7 +572,7 @@ public class UnlockApp : IDisposable
     private uint GradGetShape32(Bitmap image, float minRadius, float maxRadius, float sampleRadius, float stepLen, float thr, bool print = false)
     {
         var center = new Vector2(config.CircleCenterX, config.CircleCenterY);
-        var scaledCenter = Utility.ScalePosition(center);
+        var scaledCenter = Utility.TranslatePosition(center);
         var scaledMaxRadius = Utility.ScaleRadius(maxRadius);
         var scaledMinRadius = Utility.ScaleRadius(minRadius);
         var scaledStepLen = Utility.ScaleRadius(stepLen);

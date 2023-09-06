@@ -12,40 +12,41 @@ public static class Utility
     [DllImport("user32", SetLastError = true)]
     public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
-    public static Vector2 ScalePosition(Vector2 value)
+    public static Vector2 TranslatePosition(Vector2 posInReference)
     {
-        return new(ScaleFloatPositionX(value.X), ScaleFloatPositionY(value.Y));
+        var config = AppConfig.Instance;
+
+        //translate pos from reference pos to (-1,1)
+        var rx = (posInReference.X * 2 - config.ReferenceResolutionWidth) / config.ReferenceUIWidth;
+        var ry = (posInReference.Y * 2 - config.ReferenceResolutionHeight) / config.ReferenceUIHeight;
+
+        //translate pos from (-1,1) to screen pos
+        var x = (rx * config.ScreenUIWidth + config.ScreenWidth) / 2;
+        var y = (ry * config.ScreenUIHeight + config.ScreenHeight) / 2;
+
+        return new Vector2(x, y);
     }
 
     public static float ScaleRadius(float value)
     {
-        //narrower than 16:9
-        if ((float)AppConfig.Instance.ScreenWidth / AppConfig.Instance.ScreenHeight < 16f / 9f)
-            return value * AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth;
-        return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight;
-
+        var config = AppConfig.Instance;
+        return value * config.ScreenUIScale / config.ReferenceUIScale;
     }
 
-    public static float ScaleFloatPositionX(float value)
+    public static float TranslatePositionX(float value)
     {
-        //narrower than 16:9
-        if ((float)AppConfig.Instance.ScreenWidth / AppConfig.Instance.ScreenHeight < 16f / 9f)
-            return value * AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth;
-
-        return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight +
-           (AppConfig.Instance.ScreenWidth - (float)AppConfig.Instance.ReferenceResolutionWidth *
-               AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight) / 2;
+        var config = AppConfig.Instance;
+        var rx = (value * 2 - config.ReferenceResolutionWidth) / config.ReferenceUIWidth;
+        var x = (rx * config.ScreenUIWidth + config.ScreenWidth) / 2;
+        return x;
     }
 
-    public static float ScaleFloatPositionY(float value)
-    { 
-        //narrower than 16:9
-        if ((float)AppConfig.Instance.ScreenWidth / AppConfig.Instance.ScreenHeight < 16f / 9f)
-            return value * AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth +
-                   (AppConfig.Instance.ScreenHeight - (float)AppConfig.Instance.ReferenceResolutionHeight *
-                       AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth) / 2;
-
-        return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight;
+    public static float TranslatePositionY(float value)
+    {
+        var config = AppConfig.Instance;
+        var ry = (value * 2 - config.ReferenceResolutionHeight) / config.ReferenceUIHeight;
+        var y = (ry * config.ScreenUIHeight + config.ScreenHeight) / 2;
+        return y;
     }
 
     public static Bitmap CaptureScreen(int display)
@@ -96,11 +97,11 @@ public static class Utility
 
         var config = AppConfig.Instance;
 
-        var x0 = (int)ScaleFloatPositionX(config.KeyAreaX0);
-        var y0 = (int)ScaleFloatPositionY(config.KeyAreaY0);
+        var x0 = (int)TranslatePositionX(config.KeyAreaX0);
+        var y0 = (int)TranslatePositionY(config.KeyAreaY0);
 
-        var x1 = (int)ScaleFloatPositionX(config.KeyAreaX0 + config.KeyAreaWidth);
-        var y1 = (int)ScaleFloatPositionY(config.KeyAreaY0 + config.KeyAreaHeight);
+        var x1 = (int)TranslatePositionX(config.KeyAreaX0 + config.KeyAreaWidth);
+        var y1 = (int)TranslatePositionY(config.KeyAreaY0 + config.KeyAreaHeight);
 
         unsafe
         {
