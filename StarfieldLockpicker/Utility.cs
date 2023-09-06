@@ -19,18 +19,32 @@ public static class Utility
 
     public static float ScaleRadius(float value)
     {
+        //narrower than 16:9
+        if ((float)AppConfig.Instance.ScreenWidth / AppConfig.Instance.ScreenHeight < 16f / 9f)
+            return value * AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth;
         return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight;
+
     }
 
     public static float ScaleFloatPositionX(float value)
     {
+        //narrower than 16:9
+        if ((float)AppConfig.Instance.ScreenWidth / AppConfig.Instance.ScreenHeight < 16f / 9f)
+            return value * AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth;
+
         return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight +
-               (AppConfig.Instance.ScreenWidth - (float)AppConfig.Instance.ReferenceResolutionWidth *
-                   AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight) / 2;
+           (AppConfig.Instance.ScreenWidth - (float)AppConfig.Instance.ReferenceResolutionWidth *
+               AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight) / 2;
     }
 
     public static float ScaleFloatPositionY(float value)
-    {
+    { 
+        //narrower than 16:9
+        if ((float)AppConfig.Instance.ScreenWidth / AppConfig.Instance.ScreenHeight < 16f / 9f)
+            return value * AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth +
+                   (AppConfig.Instance.ScreenHeight - (float)AppConfig.Instance.ReferenceResolutionHeight *
+                       AppConfig.Instance.ScreenWidth / AppConfig.Instance.ReferenceResolutionWidth) / 2;
+
         return value * AppConfig.Instance.ScreenHeight / AppConfig.Instance.ReferenceResolutionHeight;
     }
 
@@ -56,19 +70,6 @@ public static class Utility
         return captureBitmap;
     }
 
-    public static void ExtractIndexes(ulong number, Span<int> index, ReadOnlySpan<int> dims)
-    {
-        if (index.Length != dims.Length)
-            throw new ArgumentException();
-
-        ulong mul = 1;
-        for (var i = 0; i < index.Length; i++)
-        {
-            var count = (ulong)dims[i];
-            index[i] = (int)(number / mul % count);
-            mul *= count;
-        }
-    }
     public static bool CheckAllBitSet(ReadOnlySpan<uint> playground)
     {
         foreach (var item in playground)
@@ -124,30 +125,6 @@ public static class Utility
 
         double msePerPixel = mse / ((x1 - x0) * (y1 - y0) * 3.0);
         return msePerPixel;
-    }
-
-    public static float CalculateMaxColor(Bitmap bitmap, Vector2 center, float radius)
-    {
-        float max = -1;
-
-        var x0 = (int)float.Floor(center.X - radius);
-        var y0 = (int)float.Floor(center.Y - radius);
-        var x1 = (int)float.Ceiling(center.X + radius);
-        var y1 = (int)float.Ceiling(center.Y + radius);
-
-        for (var x = x0; x <= x1; x++)
-        {
-            for (var y = y0; y <= y1; y++)
-            {
-                if (IsInsideCircle(center, new(x, y), radius))
-                {
-                    var pixelColor = bitmap.GetPixel(x, y);
-                    var grayValue = 0.3f * pixelColor.G + 0.7f * pixelColor.B;
-                    max = float.Max(grayValue, max);
-                }
-            }
-        }
-        return max;
     }
 
     public static float CalculateMaxB(Bitmap bitmap, Vector2 center, float radius)

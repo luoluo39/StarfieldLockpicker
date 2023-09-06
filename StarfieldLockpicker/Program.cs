@@ -1,7 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text.Json;
-using Microsoft.VisualBasic;
 using StarfieldLockpicker;
 
 Application.SetHighDpiMode(HighDpiMode.SystemAware);
