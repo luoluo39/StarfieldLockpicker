@@ -8,7 +8,7 @@ Console.WriteLine("Hello, World!");
 
 uint[] lockShapes = new uint[4];
 
-var bm = (Bitmap)Image.FromFile(@"C:\Users\24580\Downloads\15ROnfk.jpeg");
+var bm = (Bitmap)Image.FromFile(@"C:\Users\24580\Downloads\IMG_4489.png");
 
 var bm1 = Utility.FillKeyArea(bm, Color.AliceBlue);
 bm1.Save("awgahrah.png", ImageFormat.Png);

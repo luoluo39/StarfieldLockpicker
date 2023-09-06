@@ -145,8 +145,8 @@ public class UnlockApp : IDisposable
 
             var (image, selected, mse) = GetSelectedKeyIndexAndBitmap(keySelectionImages);
             Utility.ConsoleDebug($"Selected: {selected}:{result[selected].Level} mse:{mse} current level: {currentLevel}");
-            if (mse >= config.ImageMseThr)
-                Utility.ConsoleWarning($"warning: mse is greater than thr ({mse} - {config.ImageMseThr})");
+            //if (mse >= config.ImageMseThr)
+            //    Utility.ConsoleWarning($"warning: mse is greater than thr ({mse} - {config.ImageMseThr})");
 
             //pre-insert check
             //var key = result[selected];
@@ -339,9 +339,10 @@ public class UnlockApp : IDisposable
     private (Bitmap bitmap, int index, double mse) GetSelectedKeyIndexAndBitmap(Bitmap[] keySelectionImages)
     {
         var image = Utility.CaptureScreen(config.Display);
-        return keySelectionImages
+        var result = keySelectionImages
             .Select((t, i) => (image: t, index: i, mse: Utility.CalculateKeyAreaMSE(image, t)))
             .MinBy(t => t.mse);
+        return (image, result.index, result.mse);
     }
 
     private int GetDeltaRotate(uint src, uint dst)

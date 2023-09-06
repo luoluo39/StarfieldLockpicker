@@ -27,8 +27,8 @@ public class AppConfig
     {
         result = new AppConfig();
         {
-            result.ScreenWidth = 3440;
-            result.ScreenHeight = 1440;
+            result.ScreenWidth = 2560;
+            result.ScreenHeight = 1600;
         }
         return true;
     }
