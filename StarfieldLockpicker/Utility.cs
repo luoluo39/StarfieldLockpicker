@@ -109,14 +109,11 @@ public static class Utility
             {
                 for (int x = x0; x < x1; x++)
                 {
-                    var ptr1 = (byte*)data1.Scan0 + (data1.Stride * y + x * 4);
-                    var ptr2 = (byte*)data2.Scan0 + (data2.Stride * y + x * 4);
-                    for (int i = 1; i < 4; i++) // 4 bytes per pixel (ARGB)
-                    {
-                        //They may lied. is it actually BGRA?
-                        int diff = ptr1[i] - ptr2[i];
-                        mse += diff * diff;
-                    }
+                    var color1 = Color.FromArgb(*(int*)(data1.Scan0 + (data1.Stride * y + x * 4)));
+                    var color2 = Color.FromArgb(*(int*)(data2.Scan0 + (data2.Stride * y + x * 4)));
+                    var cv1 = new Vector3(color1.R, color1.G, color1.B);
+                    var cv2 = new Vector3(color2.R, color2.G, color2.B);
+                    mse += Vector3.DistanceSquared(cv1, cv2);
                 }
             }
         }

@@ -1,5 +1,6 @@
 ﻿using System.Drawing.Imaging;
 using System.Numerics;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace StarfieldLockpicker;
 
@@ -11,27 +12,43 @@ public static class Utility
     private const int ReferenceResolutionWidth = 1920;
     private const int ReferenceResolutionHeight = 1080;
 
-    public static Vector2 ScalePosition(Vector2 value)
+    public static Vector2 TranslatePosition(Vector2 posInReference)
     {
-        return new(ScaleFloatPositionX(value.X), ScaleFloatPositionY(value.Y));
+        var config = AppConfig.Instance;
+
+        //translate pos from reference pos to (-1,1)
+        var rx = (posInReference.X * 2 - config.ReferenceResolutionWidth) / config.ReferenceUIWidth;
+        var ry = (posInReference.Y * 2 - config.ReferenceResolutionHeight) / config.ReferenceUIHeight;
+
+        //translate pos from (-1,1) to screen pos
+        var x = (rx * config.ScreenUIWidth + config.ScreenWidth) / 2;
+        var y = (ry * config.ScreenUIHeight + config.ScreenHeight) / 2;
+
+        return new Vector2(x, y);
     }
 
     public static float ScaleRadius(float value)
     {
-        return value * ScreenHeight / ReferenceResolutionHeight;
+        var config = AppConfig.Instance;
+        return value * config.ScreenUIScale / config.ReferenceUIScale;
     }
 
-    public static float ScaleFloatPositionX(float value)
+    public static float TranslatePositionX(float value)
     {
-        return value * ScreenHeight / ReferenceResolutionHeight +
-               (ScreenWidth - (float)ReferenceResolutionWidth *
-                   ScreenHeight / ReferenceResolutionHeight) / 2;
+        var config = AppConfig.Instance;
+        var rx = (value * 2 - config.ReferenceResolutionWidth) / config.ReferenceUIWidth;
+        var x = (rx * config.ScreenUIWidth + config.ScreenWidth) / 2;
+        return x;
     }
 
-    public static float ScaleFloatPositionY(float value)
+    public static float TranslatePositionY(float value)
     {
-        return value * ScreenHeight / ReferenceResolutionHeight;
+        var config = AppConfig.Instance;
+        var ry = (value * 2 - config.ReferenceResolutionHeight) / config.ReferenceUIHeight;
+        var y = (ry * config.ScreenUIHeight + config.ScreenHeight) / 2;
+        return y;
     }
+
 
     public static Bitmap FillKeyArea(Bitmap bmp1, Color color)
     {
@@ -42,15 +59,16 @@ public static class Utility
         double mse = 0;
 
         Console.WriteLine(copied.PixelFormat);
-        BitmapData data2 = copied.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
         //1333,130,494,744 on 1080p
 
-        var x0 = (int)ScaleFloatPositionX(1333);
-        var y0 = (int)ScaleFloatPositionY(130);
+        var x0 = (int)TranslatePositionX(1333);
+        var y0 = (int)TranslatePositionY(130);
 
-        var x1 = (int)ScaleFloatPositionX(1333 + 494);
-        var y1 = (int)ScaleFloatPositionY(130 + 744);
+        var x1 = (int)TranslatePositionX(1333 + 494);
+        var y1 = (int)TranslatePositionY(130 + 744);
+        Console.WriteLine(copied.GetPixel(x0, y0));
 
+        BitmapData data2 = copied.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
         unsafe
         {
             for (int y = y0; y < y1; y++)
@@ -58,6 +76,17 @@ public static class Utility
                 for (int x = x0; x < x1; x++)
                 {
                     var ptr2 = (byte*)data2.Scan0 + (data2.Stride * y + x * 4);
+
+                    if (x == x0 && y == y0)
+                    {
+                        var color2 = Color.FromArgb(*(int*)(data2.Scan0 + (data2.Stride * y + x * 4)));
+                        Console.WriteLine(color2);
+
+                        Console.WriteLine(ptr2[2]);
+                        Console.WriteLine(ptr2[1]);
+                        Console.WriteLine(ptr2[0]);
+                    }
+
                     for (int i = 0; i < 3; i++) // 4 bytes per pixel (ARGB)
                     {
                         ptr2[i] = 255;
@@ -85,11 +114,11 @@ public static class Utility
 
         //1333,130,494,744 on 1080p
 
-        var x0 = (int)ScaleFloatPositionX(1333);
-        var y0 = (int)ScaleFloatPositionY(130);
+        var x0 = (int)TranslatePositionX(1333);
+        var y0 = (int)TranslatePositionY(130);
 
-        var x1 = (int)ScaleFloatPositionX(1333 + 494);
-        var y1 = (int)ScaleFloatPositionY(130 + 744);
+        var x1 = (int)TranslatePositionX(1333 + 494);
+        var y1 = (int)TranslatePositionY(130 + 744);
 
         unsafe
         {

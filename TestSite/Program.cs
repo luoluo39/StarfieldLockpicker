@@ -8,7 +8,7 @@ Console.WriteLine("Hello, World!");
 
 uint[] lockShapes = new uint[4];
 
-var bm = (Bitmap)Image.FromFile(@"C:\Users\24580\Downloads\7rU55UW.jpeg");
+var bm = (Bitmap)Image.FromFile(@"C:\Users\24580\Downloads\15ROnfk.jpeg");
 
 var bm1 = Utility.FillKeyArea(bm, Color.AliceBlue);
 bm1.Save("awgahrah.png", ImageFormat.Png);
@@ -42,35 +42,24 @@ var shapeK = GetShape32(bm,
     0.175f,
     true);
 
-var sp0 = (205 + 240) / 2f;
-var sp1 = (168 + 205) / 2f;
-var sp2 = (135 + 168) / 2f;
-var sp3 = (105 + 135) / 2f;
-var sp4 = 2 * sp3 - sp2;
-
-var shapex0 = GradGetShape32(bm, sp1, sp0, 2f, 10f, 0, 0.05f, true);
-var shapex1 = GradGetShape32(bm, sp2, sp1, 2f, 10f, 0, 0.05f, true);
-var shapex2 = GradGetShape32(bm, sp3, sp2, 2f, 10f, 0, 0.05f, true);
-var shapex3 = GradGetShape32(bm, sp4, sp3, 2f, 10f, 0, 0.05f, true);
-
-lockShapes[0] = shape0;
-lockShapes[1] = shape1;
-lockShapes[2] = shape2;
-lockShapes[3] = shape3;
+var shapex0 = GradGetLockShape32(bm, 0);
+var shapex1 = GradGetLockShape32(bm, 1);
+var shapex2 = GradGetLockShape32(bm, 2);
+var shapex3 = GradGetLockShape32(bm, 3);
 
 ConsoleWriteShape32(shapeK);
 
 Console.WriteLine();
-ConsoleWriteShape32(lockShapes[0]);
+ConsoleWriteShape32(shape0);
 ConsoleWriteShape32(shapex0);
 Console.WriteLine();
-ConsoleWriteShape32(lockShapes[1]);
+ConsoleWriteShape32(shape1);
 ConsoleWriteShape32(shapex1);
 Console.WriteLine();
-ConsoleWriteShape32(lockShapes[2]);
+ConsoleWriteShape32(shape2);
 ConsoleWriteShape32(shapex2);
 Console.WriteLine();
-ConsoleWriteShape32(lockShapes[3]);
+ConsoleWriteShape32(shape3);
 ConsoleWriteShape32(shapex3);
 Console.WriteLine();
 static void ConsoleWriteShape32(uint shape)
@@ -86,7 +75,7 @@ static void ConsoleWriteShape32(uint shape)
 uint GetShape32(Bitmap image, float circleRadius, float sampleRadius, float thr, bool print = false)
 {
     var center = new Vector2(960, 540);
-    var scaledCenter = Utility.ScalePosition(center);
+    var scaledCenter = Utility.TranslatePosition(center);
     var scaledRadius = Utility.ScaleRadius(circleRadius);
     var scaledSampleRadius = Utility.ScaleRadius(sampleRadius);
 
@@ -107,11 +96,30 @@ uint GetShape32(Bitmap image, float circleRadius, float sampleRadius, float thr,
     return v;
 }
 
-
-uint GradGetShape32(Bitmap image, float minRadius, float maxRadius, float sampleRadius, float stepLen, int n, float thr, bool print = false)
+uint GradGetLockShape32(Bitmap image, int layer)
 {
-    var center = new Vector2(960, 540);
-    var scaledCenter = Utility.ScalePosition(center);
+    var config = AppConfig.Instance;
+    var sp0 = (config.CircleRadius0 + config.CircleRadiusKey) / 2f;
+    var sp1 = (config.CircleRadius1 + config.CircleRadius0) / 2f;
+    var sp2 = (config.CircleRadius2 + config.CircleRadius1) / 2f;
+    var sp3 = (config.CircleRadius3 + config.CircleRadius2) / 2f;
+    var sp4 = 2 * sp3 - sp2;
+
+    return layer switch
+    {
+        0 => GradGetShape32(image, sp1, sp0, config.SampleRadius0, 10f, config.SampleThr0, config.PrintMaxColor0),
+        1 => GradGetShape32(image, sp2, sp1, config.SampleRadius1, 10f, config.SampleThr1, config.PrintMaxColor1),
+        2 => GradGetShape32(image, sp3, sp2, config.SampleRadius2, 10f, config.SampleThr2, config.PrintMaxColor2),
+        3 => GradGetShape32(image, sp4, sp3, config.SampleRadius3, 10f, config.SampleThr3, config.PrintMaxColor3),
+        _ => throw new ArgumentOutOfRangeException(nameof(layer))
+    };
+}
+
+uint GradGetShape32(Bitmap image, float minRadius, float maxRadius, float sampleRadius, float stepLen, float thr, bool print = false)
+{
+    var config = AppConfig.Instance;
+    var center = new Vector2(config.CircleCenterX, config.CircleCenterY);
+    var scaledCenter = Utility.TranslatePosition(center);
     var scaledMaxRadius = Utility.ScaleRadius(maxRadius);
     var scaledMinRadius = Utility.ScaleRadius(minRadius);
     var scaledStepLen = Utility.ScaleRadius(stepLen);
