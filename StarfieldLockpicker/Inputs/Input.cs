@@ -7,6 +7,7 @@ public static class Input
 {
     private static Lazy<ScanCode[]> lazyVKCode2ScanCode = new(LoadVKCode2ScanCode);
     private static ScanCode[] VKCode2ScanCode => lazyVKCode2ScanCode.Value;
+    private static volatile bool disabled = false;
 
     private static ScanCode[] LoadVKCode2ScanCode()
     {
@@ -29,9 +30,17 @@ public static class Input
         return VKCode2ScanCode[(int)key];
     }
 
+    public static void Disable()
+    {
+        disabled = true;
+    }
+
 
     private static void SendInputs(params INPUT[] inputs)
     {
+        if (disabled)
+            return;
+
         SendInput(inputs.Length, inputs, Marshal.SizeOf<INPUT>());
     }
 

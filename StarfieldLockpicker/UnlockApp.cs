@@ -16,12 +16,13 @@ public class UnlockApp : IDisposable
 {
     private Task? runningTask;
     private AppConfig config = AppConfig.Instance;
-    private CancellationToken cancellationToken;
+    private CancellationToken appCancellationToken;
+    private CancellationTokenSource? taskCancellationTokenSource;
     private int status;
 
     public UnlockApp(CancellationToken cancellationToken)
     {
-        this.cancellationToken = cancellationToken;
+        this.appCancellationToken = cancellationToken;
     }
 
     public void Run(MessageWindow messageWindow)
@@ -29,6 +30,10 @@ public class UnlockApp : IDisposable
         Input.ForceReload();
 
         messageWindow.OnHoyKeyPressed += OnKeybdHookOnOnKeyboardEvent;
+        appCancellationToken.Register(() =>
+        {
+            taskCancellationTokenSource?.Cancel();
+        });
     }
 
     private void OnKeybdHookOnOnKeyboardEvent()
@@ -36,8 +41,44 @@ public class UnlockApp : IDisposable
         if (TrySwitchStatus(AppStatus.Ready, AppStatus.Running))
         {
             //start a task to avoid (stuck or exception in a hook callback and block all keyboard inputs)
-            runningTask = UnlockAsync(cancellationToken);
-            runningTask.ContinueWith(task => TrySwitchStatus(AppStatus.Running, AppStatus.Ready), cancellationToken);
+            taskCancellationTokenSource = new();
+            runningTask = UnlockAsync(taskCancellationTokenSource.Token);
+            runningTask = runningTask.ContinueWith(task =>
+            {
+                TrySwitchStatus(AppStatus.Running, AppStatus.Ready);
+                runningTask = null;
+                Utility.ConsoleInfo($"task finished with status: {task.Status}");
+                if (task.Exception is not null)
+                {
+                    if (task.Exception.InnerExceptions.Count == 1)
+                    {
+                        var exc = task.Exception.InnerExceptions.Single();
+                        if (exc is TaskCanceledException or OperationCanceledException)
+                            Utility.ConsoleWarning("Task canceled");
+                        else if (exc is TerminatingException)
+                            Utility.ConsoleWarning("Task terminated due to error");
+                        else
+                            Utility.ConsoleError($"Task completed with exception:\n{task.Exception}");
+                    }
+                    else
+                        Utility.ConsoleError($"Task completed with exception:\n{task.Exception}");
+                }
+                taskCancellationTokenSource = null;
+            }, taskCancellationTokenSource.Token);
+        }
+        else if (TrySwitchStatus(AppStatus.Running, AppStatus.Ready))
+        {
+            //press hotkey again will stop running task
+            Utility.ConsoleInfo("Cancellation requested.");
+            taskCancellationTokenSource.Cancel();
+            try
+            {
+                runningTask.Wait();
+            }
+            catch (Exception)
+            {
+            }
+            Utility.ConsoleInfo("Task canceled.");
         }
     }
 
@@ -46,12 +87,11 @@ public class UnlockApp : IDisposable
         return Interlocked.CompareExchange(ref status, (int)to, (int)from) == (int)from;
     }
 
-    [SuppressMessage("ReSharper", "MethodSupportsCancellation")]
     private async Task UnlockAsync(CancellationToken cancellationToken)
     {
         Utility.ConsoleInfo("Begin");
         //first we get a image of each level of the lock (and also the first key)
-        var (keys, keySelectionImages, locks) = await CaptureLockAndKeys();
+        var (keys, keySelectionImages, locks) = await CaptureLockAndKeysAsync(cancellationToken);
 
         //to reduce search range, we find every possible position of each key
         Utility.ConsoleInfo("Captured");
@@ -71,10 +111,10 @@ public class UnlockApp : IDisposable
             Utility.ConsoleInfo($"Level: {level}, Rot:{rotation / 2}");
         }
 
-        await Task.Delay(50);
+        await Task.Delay(50, cancellationToken);
 
         //rotate each key to the calculated position
-        await RotateAndInsertKeys(result, keySelectionImages);
+        await RotateAndInsertKeysAsnc(result, keySelectionImages, cancellationToken);
 
         foreach (var image in keySelectionImages)
         {
@@ -82,12 +122,13 @@ public class UnlockApp : IDisposable
         }
     }
 
-    private async Task RotateAndInsertKeys(KeyLevelRot[] result, Bitmap[] keySelectionImages)
+    private async Task RotateAndInsertKeysAsnc(KeyLevelRot[] result, Bitmap[] keySelectionImages,
+        CancellationToken cancellationToken)
     {
         for (var keyIndex = 0; keyIndex < result.Length; keyIndex++)
         {
-            await SelectKeyAsync(keySelectionImages, keyIndex);
-            await RotateKeyAsync(result[keyIndex]);
+            await SelectKeyAsync(keySelectionImages, keyIndex, cancellationToken);
+            await RotateKeyAsync(result[keyIndex], cancellationToken);
         }
 
         var currentLevel = 0;
@@ -95,6 +136,8 @@ public class UnlockApp : IDisposable
         var maxLevel = result.Max(t => t.Level);
         while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var selected = GetSelectedKeyIndex(keySelectionImages, out var image);
             Utility.ConsoleDebug($"Selected: {selected}:{result[selected].Level} current level: {currentLevel}");
 
@@ -103,23 +146,8 @@ public class UnlockApp : IDisposable
             if (result[selected].Level == currentLevel)
             {
                 Utility.ConsoleDebug($"Inserting: {selected}:{result[selected].Level}");
-                //var lockShape = GradGetLockShape32(image, currentLevel);
-                //var keyShape = GetKeyShape32(image);
-                //var assumedKeyShape = uint.RotateLeft(key.InitialShape, key.Rotation);
 
-                //if (assumedKeyShape != keyShape)
-                //{
-                //    Utility.ConsoleError("keyShape not equals to assumed");
-                //    Utility.ConsoleDebug($"{keyShape} -- {assumedKeyShape}");
-                //    throw new Exception();
-                //}
-
-                //if ((keyShape & lockShape) != 0)
-                //{
-                //    Utility.ConsoleError("key can not be inserted into lock");
-                //    throw new Exception();
-                //}
-                await InsertKeyAsync(image);
+                await InsertKeyAsync(image, cancellationToken);
                 if (--remains == 0)
                 {
                     Utility.ConsoleInfo($"Finish Level {currentLevel}");
@@ -127,7 +155,7 @@ public class UnlockApp : IDisposable
                     if (currentLevel > maxLevel)
                         break;
                     remains = result.Count(t => t.Level == currentLevel);
-                    await Task.Delay(1200);
+                    await Task.Delay(1200, cancellationToken);
                 }
             }
             else
@@ -141,21 +169,23 @@ public class UnlockApp : IDisposable
         Utility.ConsoleInfo($"Finish All Levels");
     }
 
-    private async Task InsertKeyAsync(Bitmap? beforeInsert)
+    private async Task InsertKeyAsync(Bitmap? beforeInsert, CancellationToken cancellationToken)
     {
         beforeInsert ??= Utility.CaptureScreen(config.Display);
 
         for (int i = 0; i < 5; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             Input.KeyboardKeyClick(VKCode.E, 50);
-            await Task.Delay(100);
+            await Task.Delay(100, cancellationToken);
 
             Utility.ConsoleDebug("Insert command sent, waiting for 1000ms.");
             var success = await DoWaitingAsync(() =>
             {
                 using var currentImage = Utility.CaptureScreen(config.Display);
                 return Utility.CalculateKeyAreaMSE(currentImage, beforeInsert) >= config.ImageMseThr;
-            }, 50, 1000);
+            }, 50, 1000, cancellationToken);
 
             if (success)
                 return;
@@ -165,15 +195,16 @@ public class UnlockApp : IDisposable
 
 
         Utility.ConsoleError("insert timeout. terminating");
-        throw new Exception();
+        throw new TerminatingException();
     }
 
-    private static async Task<bool> DoWaitingAsync(Func<bool> condition, int delay, float timeout)
+    private static async Task<bool> DoWaitingAsync(Func<bool> condition, int delay, float timeout,
+        CancellationToken cancellationToken)
     {
         var begin = Stopwatch.GetTimestamp();
         while (true)
         {
-            await Task.Delay(delay);
+            await Task.Delay(delay, cancellationToken);
             if (condition()) return true;
 
             var time = Stopwatch.GetElapsedTime(begin);
@@ -182,7 +213,7 @@ public class UnlockApp : IDisposable
         }
     }
 
-    private async Task RotateKeyAsync(KeyLevelRot key)
+    private async Task RotateKeyAsync(KeyLevelRot key, CancellationToken cancellationToken)
     {
         var (initialShape, _, rotation) = key;
 
@@ -191,7 +222,9 @@ public class UnlockApp : IDisposable
         int counter = 0;
         while (true)
         {
-            await Rotate(rot);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await RotateAsync(rot, cancellationToken);
 
             var current = GetKeyShape32();
             rot = GetDeltaRotate(current, rotated);
@@ -206,7 +239,7 @@ public class UnlockApp : IDisposable
                     var current = GetKeyShape32();
                     rotBox.Value = GetDeltaRotate(current, rotated);
                     return rotBox.Value == 0;
-                }, 50, 1000);
+                }, 50, 1000, cancellationToken);
 
             if (success)
                 break;
@@ -215,25 +248,27 @@ public class UnlockApp : IDisposable
             if (rot == -1)
             {
                 Utility.ConsoleError("Key shape do not match, what is happening?");
-                throw new Exception();
+                throw new TerminatingException();
             }
 
-            Utility.ConsoleWarning($"Warning: key is not rotated to position. retrying {counter / 10}.");
+            Utility.ConsoleWarning($"Warning: key is not rotated to position. retrying {counter}/10.");
 
             if (counter > 10)
             {
                 Utility.ConsoleError("Failed to rotate key to position, too many times.");
-                throw new Exception();
+                throw new TerminatingException();
             }
             counter++;
         }
     }
 
-    private async Task SelectKeyAsync(Bitmap[] keySelectionImages, int keyIndex)
+    private async Task SelectKeyAsync(Bitmap[] keySelectionImages, int keyIndex, CancellationToken cancellationToken)
     {
         int times = 0;
         while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var actualKeyIndex = GetSelectedKeyIndex(keySelectionImages);
             var delta = keyIndex - actualKeyIndex;
 
@@ -247,7 +282,7 @@ public class UnlockApp : IDisposable
                     Utility.ConsoleWarning(
                         $"Warning: key is not selected, waiting for 1000ms. current={actualKeyIndex} dest={keyIndex} delta={delta}");
 
-                    var success = await DoWaitingAsync(() => keyIndex == GetSelectedKeyIndex(keySelectionImages), 50, 1000);
+                    var success = await DoWaitingAsync(() => keyIndex == GetSelectedKeyIndex(keySelectionImages), 50, 1000, cancellationToken);
 
                     if (success)
                         break;
@@ -260,7 +295,7 @@ public class UnlockApp : IDisposable
             if (times > 5)
             {
                 Utility.ConsoleError("Failed to select the key, too many times.");
-                throw new Exception();
+                throw new TerminatingException();
             }
 
             for (int i = 0; i < Math.Abs(delta); i++)
@@ -300,25 +335,29 @@ public class UnlockApp : IDisposable
         return -1;
     }
 
-    private static async Task Rotate(int r)
+    private static async Task RotateAsync(int r, CancellationToken cancellationToken)
     {
         if (r > 16)
         {
             for (int j = 0; j < 32 - r; j++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 Input.KeyboardKeyClick(VKCode.A, 50);
-                await Task.Delay(20);
+                await Task.Delay(20, cancellationToken);
             }
         }
         else
         {
             for (int j = 0; j < r; j++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 Input.KeyboardKeyClick(VKCode.D, 50);
-                await Task.Delay(20);
+                await Task.Delay(20, cancellationToken);
             }
         }
-        await Task.Delay(100);
+        await Task.Delay(100, cancellationToken);
     }
 
     private static List<KeyLevelRot>[] FindKeyPositions(uint[] keys, uint[] levels)
@@ -346,14 +385,16 @@ public class UnlockApp : IDisposable
         return keyPositions;
     }
 
-    private async Task<(uint[] keys, Bitmap[] keyShapes, uint[] levels)> CaptureLockAndKeys()
+    private async Task<(uint[] keys, Bitmap[] keyShapes, uint[] levels)> CaptureLockAndKeysAsync(
+        CancellationToken cancellationToken)
     {
         List<(uint, Bitmap)> keyShapes = new();
 
-        int counter = 0;
-        int tryCounter = 5;
+        var tryCounter = 5;
         while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var image = Utility.CaptureScreen(config.Display);
             //keys are fine with old method
             if (keyShapes.Count > 0)
@@ -365,10 +406,11 @@ public class UnlockApp : IDisposable
                     if (tryCounter-- <= 0)
                     {
                         Utility.ConsoleError("Image seems to be frozen. Are you really running this in game?");
-                        throw new Exception();
+                        throw new TerminatingException();
                     }
-                    Utility.ConsoleWarning("Image not changed");
+                    Utility.ConsoleWarning($"Image not changed. mse: {mse0}");
                     image.Dispose();
+                    await Task.Delay(100, cancellationToken);
                     continue;
                 }
 
@@ -385,12 +427,12 @@ public class UnlockApp : IDisposable
             keyShapes.Add((shape, image));
 
             Input.KeyboardKeyClick(VKCode.T, 50);
-            await Task.Delay(100);
+            await Task.Delay(100, cancellationToken);
 
-            if (counter++ > 20)
+            if (keyShapes.Count > 16)
             {
-                Utility.ConsoleError("Matching too many times! Terminating");
-                throw new Exception();
+                Utility.ConsoleError("Too many keys! Terminating");
+                throw new TerminatingException();
             }
         }
 
@@ -605,72 +647,14 @@ public class UnlockApp : IDisposable
         return null;
     }
 
-    //private static KeyLevelRot[]? FindFirstSolve(uint[] locks, List<KeyLevelRot>[] keyPositionsArray)
-    //{
-    //    var dims = keyPositionsArray.Select(t => t.Count).ToImmutableArray();
-    //    var maxExclusive = dims.Aggregate(1UL, (a, b) => a * (ulong)b);
-    //
-    //    const int chunkSize = 65536;
-    //    var chunkCount = (uint)(maxExclusive / chunkSize + ((maxExclusive % chunkSize > 0) ? 1UL : 0UL));
-    //
-    //    Console.WriteLine($"combination count:{maxExclusive}");
-    //    Console.WriteLine($"chunk count:{chunkCount}");
-    //
-    //    StrongBox<KeyLevelRot[]?> resultBox = new(null);
-    //    Parallel.For(0, chunkCount, (ci, s) =>
-    //    {
-    //        Span<int> index = stackalloc int[keyPositionsArray.Length];
-    //        Span<uint> playground = stackalloc uint[locks.Length];
-    //
-    //        var from = (ulong)ci * chunkSize;
-    //        var to = Math.Min(maxExclusive, from + chunkSize);
-    //
-    //        for (ulong comb = from; comb < to; comb++)
-    //        {
-    //            locks.CopyTo(playground);
-    //
-    //            Utility.ExtractIndexes(comb, index, dims.AsSpan());
-    //            int keyIndex;
-    //            for (keyIndex = 0; keyIndex < index.Length; keyIndex++)
-    //            {
-    //                var keyPlaces = keyPositionsArray[keyIndex];
-    //
-    //                var (key, level, rot) = keyPlaces[index[keyIndex]];
-    //
-    //                if (level < 0)
-    //                    continue;
-    //
-    //                var toInsert = uint.RotateLeft(key, rot);
-    //
-    //                if ((playground[level] & toInsert) != 0)
-    //                    break;
-    //
-    //                playground[level] |= toInsert;
-    //            }
-    //
-    //            //if break in for loop
-    //            if (keyIndex != index.Length) continue;
-    //
-    //            if (Utility.CheckAllBitSet(playground))
-    //            {
-    //                var result = new KeyLevelRot[keyPositionsArray.Length];
-    //                for (keyIndex = 0; keyIndex < index.Length; keyIndex++)
-    //                {
-    //                    result[keyIndex] = keyPositionsArray[keyIndex][index[keyIndex]];
-    //                }
-    //                //we need only the first result
-    //                if (null == Interlocked.CompareExchange(ref resultBox.Value, result, null))
-    //                    s.Break();
-    //                return;
-    //            }
-    //        }
-    //    });
-    //
-    //
-    //    return resultBox.Value;
-    //}
-
     public void Dispose()
     {
+        try
+        {
+            runningTask?.Wait();
+        }
+        catch
+        {
+        }
     }
 }
