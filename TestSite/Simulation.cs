@@ -31,8 +31,6 @@ public class Simulation : ICoreInterface
     public Snap MakeSnap()
     {
         var (latestTime, latestSnap) = TimedSnaps.LastOrDefault(t => t.Key <= CurrentTime);
-        latestTime = default;
-        latestSnap = default;
 
         var selectedKey = 0;
         var currentLevel = 0;

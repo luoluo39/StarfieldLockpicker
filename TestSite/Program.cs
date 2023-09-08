@@ -1,7 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using System.Collections.Immutable;
-using System.Threading;
 using StarfieldLockpicker.Core;
 using TestSite;
 

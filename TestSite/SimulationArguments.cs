@@ -2,10 +2,10 @@
 {
     public double MseThr = 45;
 
-    public double ChangeEatKey = 0.1;
-    public double ChangeLargeLag = 0;
-    public double ChangeSmallLag = 0.4;
-    public double ChangeCancellation = 0;
+    public double ChanceEatKey = 0.1;
+    public double ChanceLargeLag = 0;
+    public double ChanceSmallLag = 0.4;
+    public double ChanceCancellation = 0;
 
     public double BaseTimeSmallLag = 60;
     public double TimeSmallLag = 120;
@@ -19,10 +19,10 @@
     public double MinDelayOffset = 0;
     public double MaxDelayOffset = 20;
 
-    public bool CheckEatKey => Random.Shared.NextDouble() < ChangeEatKey;
-    public bool CheckSmallLag => Random.Shared.NextDouble() < ChangeSmallLag;
-    public bool CheckLargeLag => Random.Shared.NextDouble() < ChangeLargeLag;
-    public bool CheckCancellation => Random.Shared.NextDouble() < ChangeCancellation;
+    public bool CheckEatKey => Random.Shared.NextDouble() < ChanceEatKey;
+    public bool CheckSmallLag => Random.Shared.NextDouble() < ChanceSmallLag;
+    public bool CheckLargeLag => Random.Shared.NextDouble() < ChanceLargeLag;
+    public bool CheckCancellation => Random.Shared.NextDouble() < ChanceCancellation;
 
     public double RandomTimeSmallLag => BaseTimeSmallLag + Random.Shared.NextDouble() * TimeSmallLag;
     public double RandomTimeLargeLag => BaseTimeLargeLag + Random.Shared.NextDouble() * TimeLargeLag;

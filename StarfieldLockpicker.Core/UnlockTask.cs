@@ -1,9 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Xml.Linq;
-using StarfieldLockpicker.Core;
 
 namespace StarfieldLockpicker.Core;
 
