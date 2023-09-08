@@ -1,20 +1,14 @@
 ﻿using System.Drawing.Imaging;
 using System.Numerics;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Runtime.InteropServices;
 
-namespace StarfieldLockpicker;
+namespace TestSite;
 
 public static class Utility
 {
-    private const int ScreenWidth = 3440;
-    private const int ScreenHeight = 1440;
-
-    private const int ReferenceResolutionWidth = 1920;
-    private const int ReferenceResolutionHeight = 1080;
-
-    public static Vector2 TranslatePosition(Vector2 posInReference)
+    public static Vector2 TranslatePosition(Vector2 posInReference, AppConfig? config = null)
     {
-        var config = AppConfig.Instance;
+        config ??= AppConfig.Instance;
 
         //translate pos from reference pos to (-1,1)
         var rx = (posInReference.X * 2 - config.ReferenceResolutionWidth) / config.ReferenceUIWidth;
@@ -49,55 +43,73 @@ public static class Utility
         return y;
     }
 
-
-    public static Bitmap FillKeyArea(Bitmap bmp1, Color color)
+    public static Bitmap CaptureScreen(int display)
     {
-        Bitmap copied = new(bmp1);
+        var captureRectangle = Screen.AllScreens[display].Bounds;
+        var captureBitmap = new Bitmap(captureRectangle.Size.Width, captureRectangle.Size.Height, PixelFormat.Format32bppArgb);
+        var captureGraphics = Graphics.FromImage(captureBitmap);
+        captureGraphics.CopyFromScreen(captureRectangle.Left, captureRectangle.Top, 0, 0, captureRectangle.Size);
+        return captureBitmap;
+    }
+
+    public static Bitmap CaptureScreenArea(int display, Rectangle rect)
+    {
+        var bounds = Screen.AllScreens[display].Bounds;
+        var w = Math.Min(rect.Width, bounds.Width - rect.Left);
+        var h = Math.Min(rect.Height, bounds.Height - rect.Top);
+        var captureRectangle = new Rectangle(bounds.Left, bounds.Top, w, h);
+
+        var captureBitmap = new Bitmap(rect.Size.Width, rect.Size.Height, PixelFormat.Format32bppArgb);
+        var captureGraphics = Graphics.FromImage(captureBitmap);
+        captureGraphics.CopyFromScreen(captureRectangle.Left, captureRectangle.Top, 0, 0, captureRectangle.Size);
+        return captureBitmap;
+    }
+
+    public static bool CheckAllBitSet(ReadOnlySpan<uint> playground)
+    {
+        foreach (var item in playground)
+        {
+            if (item != uint.MaxValue)
+                return false;
+        }
+        return true;
+    }
+
+    public static double CalculateMSE(Bitmap bmp1, Bitmap bmp2)
+    {
+        if (bmp1.Size != bmp2.Size)
+            throw new ArgumentException("Bitmaps must have the same dimensions.");
 
         int width = bmp1.Width;
         int height = bmp1.Height;
         double mse = 0;
 
-        Console.WriteLine(copied.PixelFormat);
+        BitmapData data1 = bmp1.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        BitmapData data2 = bmp2.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+
         //1333,130,494,744 on 1080p
 
-        var x0 = (int)TranslatePositionX(1333);
-        var y0 = (int)TranslatePositionY(130);
-
-        var x1 = (int)TranslatePositionX(1333 + 494);
-        var y1 = (int)TranslatePositionY(130 + 744);
-        Console.WriteLine(copied.GetPixel(x0, y0));
-
-        BitmapData data2 = copied.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+        var config = AppConfig.Instance;
         unsafe
         {
-            for (int y = y0; y < y1; y++)
+            for (int y = 0; y < height; y++)
             {
-                for (int x = x0; x < x1; x++)
+                for (int x = 0; x < width; x++)
                 {
-                    var ptr2 = (byte*)data2.Scan0 + (data2.Stride * y + x * 4);
-
-                    if (x == x0 && y == y0)
-                    {
-                        var color2 = Color.FromArgb(*(int*)(data2.Scan0 + (data2.Stride * y + x * 4)));
-                        Console.WriteLine(color2);
-
-                        Console.WriteLine(ptr2[2]);
-                        Console.WriteLine(ptr2[1]);
-                        Console.WriteLine(ptr2[0]);
-                    }
-
-                    for (int i = 0; i < 3; i++) // 4 bytes per pixel (ARGB)
-                    {
-                        ptr2[i] = 255;
-                    }
+                    var color1 = Color.FromArgb(*(int*)(data1.Scan0 + (data1.Stride * y + x * 4)));
+                    var color2 = Color.FromArgb(*(int*)(data2.Scan0 + (data2.Stride * y + x * 4)));
+                    var cv1 = new Vector3(color1.R, color1.G, color1.B);
+                    var cv2 = new Vector3(color2.R, color2.G, color2.B);
+                    mse += Vector3.DistanceSquared(cv1, cv2);
                 }
             }
         }
 
-        copied.UnlockBits(data2);
+        bmp1.UnlockBits(data1);
+        bmp2.UnlockBits(data2);
 
-        return copied;
+        double msePerPixel = mse / (height * width * 3.0);
+        return msePerPixel;
     }
 
     public static double CalculateKeyAreaMSE(Bitmap bmp1, Bitmap bmp2)
@@ -114,11 +126,13 @@ public static class Utility
 
         //1333,130,494,744 on 1080p
 
-        var x0 = (int)TranslatePositionX(1333);
-        var y0 = (int)TranslatePositionY(130);
+        var config = AppConfig.Instance;
 
-        var x1 = (int)TranslatePositionX(1333 + 494);
-        var y1 = (int)TranslatePositionY(130 + 744);
+        var x0 = (int)TranslatePositionX(config.KeyAreaX0);
+        var y0 = (int)TranslatePositionY(config.KeyAreaY0);
+
+        var x1 = (int)TranslatePositionX(config.KeyAreaX0 + config.KeyAreaWidth);
+        var y1 = (int)TranslatePositionY(config.KeyAreaY0 + config.KeyAreaHeight);
 
         unsafe
         {
@@ -126,13 +140,11 @@ public static class Utility
             {
                 for (int x = x0; x < x1; x++)
                 {
-                    var ptr1 = (byte*)data1.Scan0 + (data1.Stride * y + x * 4);
-                    var ptr2 = (byte*)data2.Scan0 + (data2.Stride * y + x * 4);
-                    for (int i = 1; i < 4; i++) // 4 bytes per pixel (ARGB)
-                    {
-                        int diff = ptr1[i] - ptr2[i];
-                        mse += diff * diff;
-                    }
+                    var color1 = Color.FromArgb(*(int*)(data1.Scan0 + (data1.Stride * y + x * 4)));
+                    var color2 = Color.FromArgb(*(int*)(data2.Scan0 + (data2.Stride * y + x * 4)));
+                    var cv1 = new Vector3(color1.R, color1.G, color1.B);
+                    var cv2 = new Vector3(color2.R, color2.G, color2.B);
+                    mse += Vector3.DistanceSquared(cv1, cv2);
                 }
             }
         }
@@ -174,4 +186,31 @@ public static class Utility
         return Vector2.DistanceSquared(center, pos) <= radius * radius;
     }
 
+    public static void ConsoleError(string str)
+    {
+        Console.ForegroundColor = ConsoleColor.DarkRed;
+        Console.WriteLine(str);
+        Console.ResetColor();
+    }
+
+    public static void ConsoleWarning(string str)
+    {
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        Console.WriteLine(str);
+        Console.ResetColor();
+    }
+
+    public static void ConsoleInfo(string str)
+    {
+        Console.ForegroundColor = ConsoleColor.Gray;
+        Console.WriteLine(str);
+        Console.ResetColor();
+    }
+
+    public static void ConsoleDebug(string str)
+    {
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine(str);
+        Console.ResetColor();
+    }
 }

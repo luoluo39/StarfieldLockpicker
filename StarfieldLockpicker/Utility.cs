@@ -12,9 +12,9 @@ public static class Utility
     [DllImport("user32", SetLastError = true)]
     public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
-    public static Vector2 TranslatePosition(Vector2 posInReference)
+    public static Vector2 TranslatePosition(Vector2 posInReference, AppConfig? config = null)
     {
-        var config = AppConfig.Instance;
+        config ??= AppConfig.Instance;
 
         //translate pos from reference pos to (-1,1)
         var rx = (posInReference.X * 2 - config.ReferenceResolutionWidth) / config.ReferenceUIWidth;
@@ -53,9 +53,20 @@ public static class Utility
     {
         var captureRectangle = Screen.AllScreens[display].Bounds;
         var captureBitmap = new Bitmap(captureRectangle.Size.Width, captureRectangle.Size.Height, PixelFormat.Format32bppArgb);
-        var captureGraphics = Graphics.FromImage(captureBitmap);
+        using var captureGraphics = Graphics.FromImage(captureBitmap);
         captureGraphics.CopyFromScreen(captureRectangle.Left, captureRectangle.Top, 0, 0, captureRectangle.Size);
         return captureBitmap;
+    }
+
+    public static void CaptureScreen(Bitmap bitmap, int display)
+    {
+        var captureRectangle = Screen.AllScreens[display].Bounds;
+
+        if (bitmap.Size != captureRectangle.Size)
+            throw new ArgumentException(nameof(bitmap));
+
+        using var captureGraphics = Graphics.FromImage(bitmap);
+        captureGraphics.CopyFromScreen(captureRectangle.Left, captureRectangle.Top, 0, 0, captureRectangle.Size);
     }
 
     public static Bitmap CaptureScreenArea(int display, Rectangle rect)
@@ -66,7 +77,7 @@ public static class Utility
         var captureRectangle = new Rectangle(bounds.Left, bounds.Top, w, h);
 
         var captureBitmap = new Bitmap(rect.Size.Width, rect.Size.Height, PixelFormat.Format32bppArgb);
-        var captureGraphics = Graphics.FromImage(captureBitmap);
+        using var captureGraphics = Graphics.FromImage(captureBitmap);
         captureGraphics.CopyFromScreen(captureRectangle.Left, captureRectangle.Top, 0, 0, captureRectangle.Size);
         return captureBitmap;
     }
@@ -79,6 +90,44 @@ public static class Utility
                 return false;
         }
         return true;
+    }
+
+
+    public static double CalculateMSE(Bitmap bmp1, Bitmap bmp2)
+    {
+        if (bmp1.Size != bmp2.Size)
+            throw new ArgumentException("Bitmaps must have the same dimensions.");
+
+        int width = bmp1.Width;
+        int height = bmp1.Height;
+        double mse = 0;
+
+        BitmapData data1 = bmp1.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        BitmapData data2 = bmp2.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+
+        //1333,130,494,744 on 1080p
+
+        var config = AppConfig.Instance;
+        unsafe
+        {
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    var color1 = Color.FromArgb(*(int*)(data1.Scan0 + (data1.Stride * y + x * 4)));
+                    var color2 = Color.FromArgb(*(int*)(data2.Scan0 + (data2.Stride * y + x * 4)));
+                    var cv1 = new Vector3(color1.R, color1.G, color1.B);
+                    var cv2 = new Vector3(color2.R, color2.G, color2.B);
+                    mse += Vector3.DistanceSquared(cv1, cv2);
+                }
+            }
+        }
+
+        bmp1.UnlockBits(data1);
+        bmp2.UnlockBits(data2);
+
+        double msePerPixel = mse / (height * width * 3.0);
+        return msePerPixel;
     }
 
     public static double CalculateKeyAreaMSE(Bitmap bmp1, Bitmap bmp2)

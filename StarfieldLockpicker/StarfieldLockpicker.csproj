@@ -23,4 +23,8 @@
     <PackageReference Include="PInvoke.User32" Version="0.7.124" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\StarfieldLockpicker.Core\StarfieldLockpicker.Core.csproj" />
+  </ItemGroup>
+
 </Project>
