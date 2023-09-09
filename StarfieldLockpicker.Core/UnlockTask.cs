@@ -103,15 +103,18 @@ public class UnlockTask
                 }
                 inserted[toInsert] = true;
                 toInserts.Remove(toInsert);
-                do
+                if (inserted.Contains(false))
                 {
-                    selecting = (selecting + 1) % inserted.Length;
-                } while (inserted[selecting]);
+                    do
+                    {
+                        selecting = (selecting + 1) % inserted.Length;
+                    } while (inserted[selecting]);
+                }
                 core.ConsoleDebug($"inserted key {toInsert}.");
             }
 
-            await core.Delay(DelayReason.LayerCompleteAnimation, cancellationToken);
             core.ConsoleInfo($"Finish Level {i}");
+            await core.Delay(DelayReason.LayerCompleteAnimation, cancellationToken);
         }
         core.ConsoleInfo($"Finish All Levels");
     }
