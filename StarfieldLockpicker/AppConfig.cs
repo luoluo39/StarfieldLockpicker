@@ -129,6 +129,11 @@ public class AppConfig
     public float IntervalForKeyboardClick { get; set; } = 15;
     public float IntervalBetweenKeyboardClick { get; set; } = 15;
 
+    public bool PrintDebug { get; set; } = false;
+    public bool PrintInfo { get; set; } = true;
+    public bool PrintWarnings { get; set; } = true;
+    public bool PrintError { get; set; } = true;
+
     public bool PrintMaxColor0 { get; set; } = false;
     public bool PrintMaxColor1 { get; set; } = false;
     public bool PrintMaxColor2 { get; set; } = false;

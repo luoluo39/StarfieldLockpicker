@@ -127,22 +127,26 @@ namespace StarfieldLockpicker
 
         public void ConsoleError(string str)
         {
-            Utility.ConsoleError(str);
+            if (_config.PrintError)
+                Utility.ConsoleError(str);
         }
 
         public void ConsoleWarning(string str)
         {
-            Utility.ConsoleWarning(str);
+            if (_config.PrintWarnings)
+                Utility.ConsoleWarning(str);
         }
 
         public void ConsoleInfo(string str)
         {
-            Utility.ConsoleInfo(str);
+            if (_config.PrintInfo)
+                Utility.ConsoleInfo(str);
         }
 
         public void ConsoleDebug(string str)
         {
-            Utility.ConsoleDebug(str);
+            if (_config.PrintDebug)
+                Utility.ConsoleDebug(str);
         }
 
         public double MseThr => AppConfig.Instance.ImageMseThr;
