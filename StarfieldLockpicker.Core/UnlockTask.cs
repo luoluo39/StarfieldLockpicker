@@ -111,7 +111,7 @@ public class UnlockTask
             }
 
             await core.Delay(DelayReason.LayerCompleteAnimation, cancellationToken);
-            core.ConsoleInfo($"Finish Level {currentLevel}");
+            core.ConsoleInfo($"Finish Level {i}");
         }
         core.ConsoleInfo($"Finish All Levels");
     }
