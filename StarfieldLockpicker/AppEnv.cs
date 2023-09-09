@@ -64,7 +64,7 @@ namespace StarfieldLockpicker
                 await Task.Delay((int)_config.IntervalBetweenKeyboardClick, cancellationToken);
 
             await Input.KeyboardKeyClickAsync(key, (int)_config.IntervalForKeyboardClick);
-            if (_config.EnableInputLostWorkaround)
+            if (_config.EnableInputLoseWorkaround)
             {
                 await Input.KeyboardKeyClickAsync(VKCode.S, (int)_config.IntervalForKeyboardClick);
             }
