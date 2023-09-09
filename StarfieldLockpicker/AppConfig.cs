@@ -35,7 +35,10 @@ public class AppConfig
             var text = File.ReadAllText(ConfigPath);
             try
             {
-                var deserialized = JsonSerializer.Deserialize<AppConfig>(text) ?? throw new NullReferenceException("null deserialized");
+                var deserialized = JsonSerializer.Deserialize<AppConfig>(text, new JsonSerializerOptions
+                {
+                    ReadCommentHandling = JsonCommentHandling.Skip
+                }) ?? throw new NullReferenceException("null deserialized");
 
                 Console.WriteLine("config loaded");
                 result = deserialized;
