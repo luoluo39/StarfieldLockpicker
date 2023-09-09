@@ -112,13 +112,6 @@ public class AppConfig
         if (!Enum.TryParse(result.KeyInsert, true, out vk))
             Utility.ConsoleError($"Key {result.KeyInsert} can not be parsed");
         result.VirtualInsert = vk;
-
-        if (result.EnableInputLoseWorkaround)
-        {
-            if (!Enum.TryParse(result.KeyWithoutAnyFunction, true, out vk))
-                Utility.ConsoleError($"Key {result.KeyWithoutAnyFunction} can not be parsed");
-            result.VirtualWorkaround = vk;
-        }
     }
 
     public int Display { get; set; } = 0;
@@ -135,10 +128,6 @@ public class AppConfig
     public float IntervalForLayerCompleteAnimation { get; set; } = 1100;
     public float IntervalForKeyboardClick { get; set; } = 15;
     public float IntervalBetweenKeyboardClick { get; set; } = 15;
-
-    public bool EnableInputLoseWorkaround { get; set; } = false;
-    public string KeyWithoutAnyFunction { get; set; } = "Num0";
-
 
     public bool PrintMaxColor0 { get; set; } = false;
     public bool PrintMaxColor1 { get; set; } = false;

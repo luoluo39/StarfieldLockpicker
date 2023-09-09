@@ -73,58 +73,45 @@ public class UnlockTask
     private async Task InsertKeysAsync(IReadOnlyList<KeyLevelRot> solve, IReadOnlyList<IKeySelectionImage> keySelectionImages)
     {
         var currentLevel = solve.Where(t => t.Level >= 0).Min(t => t.Level);
-        var remains = solve.Count(t => t.Level == currentLevel);
         var maxLevel = solve.Max(t => t.Level);
-        var traveledWithoutInsert = 0;
         bool[] inserted = new bool[solve.Count];
-        while (true)
+
+        var selecting = 0;
+        for (var i = currentLevel; i <= maxLevel; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var (image, selected, mse) = await GetSelectedKeyIndexAndImage(keySelectionImages);
-            using (image)
+            var toInserts = solve
+                .Select(static (t, i) => (level: t.Level, index: i))
+                .Where(t => t.level == i)
+                .Select(t => t.index)
+                .ToList();
+
+            while (toInserts.Count > 0)
             {
-                core.ConsoleDebug($"Selected: {selected}:{solve[selected].Level} mse:{mse:F2} current level: {currentLevel}");
+                cancellationToken.ThrowIfCancellationRequested();
 
-                if (inserted[selected])
+                var s = selecting;
+                var toInsert = toInserts.MinBy(j => Math.Abs(MinDeltaBetween(s, j, inserted.Length, inserted)));
+                core.ConsoleDebug($"inserting key {toInsert}.");
+
+                await SelectKeyAsync(keySelectionImages, toInsert, inserted);
+
+                using (var image = await core.CaptureKeyImageAsync(cancellationToken))
                 {
-                    core.ConsoleError("Selecting key should have been inserted. terminating");
-                    throw new TerminatingException();
-                }
-
-                if (solve[selected].Level == currentLevel)
-                {
-                    core.ConsoleDebug($"Inserting: {selected}:{solve[selected].Level}");
-
                     await InsertKeyAsync(image);
-                    remains--;
-                    traveledWithoutInsert = 0;
-                    inserted[selected] = true;
-
-                    core.ConsoleDebug($"Inserted: {selected}:{solve[selected].Level}");
                 }
-                else
+                inserted[toInsert] = true;
+                toInserts.Remove(toInsert);
+                do
                 {
-                    if (traveledWithoutInsert > 2 * solve.Count)
-                    {
-                        core.ConsoleError($"traveled too many times without inserting({traveledWithoutInsert}). terminating");
-                        throw new TerminatingException();
-                    }
-
-                    await SkipKeyAsync(image);
-                    traveledWithoutInsert++;
-                }
-
-                if (remains == 0)
-                {
-                    core.ConsoleInfo($"Finish Level {currentLevel}");
-                    currentLevel++;
-                    if (currentLevel > maxLevel)
-                        break;
-                    remains = solve.Count(t => t.Level == currentLevel);
-                    await core.Delay(DelayReason.LayerCompleteAnimation, cancellationToken);
-                }
+                    selecting = (selecting + 1) % inserted.Length;
+                } while (inserted[selecting]);
+                core.ConsoleDebug($"inserted key {toInsert}.");
             }
+
+            await core.Delay(DelayReason.LayerCompleteAnimation, cancellationToken);
+            core.ConsoleInfo($"Finish Level {currentLevel}");
         }
         core.ConsoleInfo($"Finish All Levels");
     }
@@ -146,7 +133,7 @@ public class UnlockTask
                 return (mse >= core.MseThr, mse);
             }, DelayReason.CommandExecution, cancellationToken);
 
-            core.ConsoleDebug($"insert: command finished, mse: {mse:F2}.");
+            core.ConsoleDebug($"insert: command end, success:{success}, mse: {mse:F2}.");
             if (success)
                 return;
 
@@ -155,6 +142,7 @@ public class UnlockTask
 
         core.ConsoleDebug($"insert: fail too many times. terminating.");
         throw new TerminatingException();
+
     }
 
     private async Task SkipKeyAsync(IKeySelectionImage beforeInsert)
@@ -235,10 +223,39 @@ public class UnlockTask
         throw new TerminatingException();
     }
 
-    private async Task SelectKeyAsync(IReadOnlyList<IKeySelectionImage> keySelectionImages, int keyIndex)
+    private static int MinDeltaBetween(int current, int target, int count, bool[]? skips = null)
+    {
+        if (skips is not null && skips[target])
+            throw new Exception();
+
+        if (current == target)
+            return 0;
+
+        var pp = current;
+        var pn = current;
+        for (var i = 1; i <= count; i++)
+        {
+            do
+            {
+                pp = (pp + 1) % count;
+            } while (skips is not null && skips[pp]);
+            if (pp == target)
+                return i;
+
+            do
+            {
+                pn = (pn + count - 1) % count;
+            } while (skips is not null && skips[pn]);
+            if (pn == target)
+                return -i;
+        }
+        throw new Exception();
+    }
+
+    private async Task SelectKeyAsync(IReadOnlyList<IKeySelectionImage> keySelectionImages, int keyIndex, bool[]? inserted = null)
     {
         var (actualKeyIndex, _) = await GetSelectedKeyIndex(keySelectionImages);
-        var delta = keyIndex - actualKeyIndex;
+        var delta = MinDeltaBetween(actualKeyIndex, keyIndex, keySelectionImages.Count, inserted);
 
         if (delta == 0)
         {
@@ -261,7 +278,7 @@ public class UnlockTask
                 return (keyIndex == cur, cur);
             }, DelayReason.CommandExecution, cancellationToken);
 
-            delta = keyIndex - actualKeyIndex;
+            delta = MinDeltaBetween(actualKeyIndex, keyIndex, keySelectionImages.Count, inserted);
             if (delta == 0)
             {
                 core.ConsoleDebug($"Selected key {keyIndex}");

@@ -100,6 +100,11 @@ while (true)
         var snap = s.MakeSnap();
         if (!withBreak && snap.Locks.Any(t => t != uint.MaxValue))
         {
+            foreach (var valueTuple in SimulationEventTracker.Events)
+            {
+                Console.WriteLine($"[{valueTuple.Item1}] {valueTuple.Item2}");
+            }
+
             Console.WriteLine("Not even completed!");
             Console.ReadLine();
         }
