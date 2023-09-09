@@ -1,0 +1,6 @@
+﻿RegisterHotKey
+UnregisterHotKey
+MapVirtualKey
+WM_HOTKEY
+SendInput
+keybd_event

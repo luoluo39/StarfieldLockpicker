@@ -1,21 +1,14 @@
 ﻿using System.Drawing.Imaging;
 using System.Numerics;
-using System.Runtime.InteropServices;
 
 namespace StarfieldLockpicker;
 
 public static class Utility
 {
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, int vk);
-
-    [DllImport("user32", SetLastError = true)]
-    public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
     public static Vector2 TranslatePosition(Vector2 posInReference, AppConfig? config = null)
     {
         config ??= AppConfig.Instance;
-
+        
         //translate pos from reference pos to (-1,1)
         var rx = (posInReference.X * 2 - config.ReferenceResolutionWidth) / config.ReferenceUIWidth;
         var ry = (posInReference.Y * 2 - config.ReferenceResolutionHeight) / config.ReferenceUIHeight;
@@ -81,17 +74,6 @@ public static class Utility
         captureGraphics.CopyFromScreen(captureRectangle.Left, captureRectangle.Top, 0, 0, captureRectangle.Size);
         return captureBitmap;
     }
-
-    public static bool CheckAllBitSet(ReadOnlySpan<uint> playground)
-    {
-        foreach (var item in playground)
-        {
-            if (item != uint.MaxValue)
-                return false;
-        }
-        return true;
-    }
-
 
     public static double CalculateMSE(Bitmap bmp1, Bitmap bmp2)
     {

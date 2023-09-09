@@ -1,4 +1,5 @@
-﻿using PInvoke;
+﻿using Windows.Win32;
+using Windows.Win32.Foundation;
 using StarfieldLockpicker;
 using StarfieldLockpicker.Inputs;
 
@@ -12,16 +13,16 @@ public class MessageWindow : Form
         {
             Console.WriteLine($"The key {AppConfig.Instance.HotKey} can not be parsed");
         }
-        if (!Utility.RegisterHotKey(Handle, 0, 0, (int)vk))
+        if (!PInvoke.RegisterHotKey((HWND)Handle, 0, 0, (uint)vk))
         {
-            Utility.UnregisterHotKey(IntPtr.Zero, 0);
+            PInvoke.UnregisterHotKey(HWND.Null, 0);
             Console.WriteLine($"The hotkey {vk} is in use! this may caused by other programs with same key, or running more than one instance of this program. try close all instances, wait for several seconds, and start again, or change hotkey in config");
         }
     }
 
     protected override void WndProc(ref Message m)
     {
-        if (m.Msg == (int)User32.WindowMessage.WM_HOTKEY)
+        if (m.Msg == (int)PInvoke.WM_HOTKEY)
         {
             OnHoyKeyPressed?.Invoke();
         }
@@ -36,6 +37,6 @@ public class MessageWindow : Form
 
     protected override void OnClosed(EventArgs e)
     {
-        Utility.UnregisterHotKey(Handle, 0);
+        PInvoke.UnregisterHotKey((HWND)Handle, 0);
     }
 }

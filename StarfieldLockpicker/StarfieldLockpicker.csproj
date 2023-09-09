@@ -19,8 +19,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="PInvoke.Kernel32" Version="0.7.124" />
-    <PackageReference Include="PInvoke.User32" Version="0.7.124" />
+    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.18-beta">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

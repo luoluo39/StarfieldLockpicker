@@ -267,7 +267,8 @@ public class UnlockTask
                 core.ConsoleDebug($"Selected key {keyIndex}");
                 return;
             }
-            core.ConsoleWarning($"failed to select key {keyIndex}, current={actualKeyIndex}. trying to fix");
+            if (counter != 4)
+                core.ConsoleWarning($"failed to select key {keyIndex}, current={actualKeyIndex}. trying to fix");
         }
         core.ConsoleError($"failed to select key {keyIndex}, too many times.");
         throw new TerminatingException();
