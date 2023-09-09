@@ -122,12 +122,12 @@ public class AppConfig
     public string KeyRotateClockwise { get; set; } = "D";
     public string KeyInsert { get; set; } = "E";
 
-    public float ResponseWaitTimeout { get; set; } = 1000;
+    public float ResponseWaitTimeout { get; set; } = 500;
     public float IntervalForUIRefresh { get; set; } = 20;
     public float IntervalForCommandExecution { get; set; } = 20;
-    public float IntervalForLayerCompleteAnimation { get; set; } = 1100;
-    public float IntervalForKeyboardClick { get; set; } = 15;
-    public float IntervalBetweenKeyboardClick { get; set; } = 15;
+    public float IntervalForLayerCompleteAnimation { get; set; } = 20;
+    public float IntervalForKeyboardClick { get; set; } = 16;
+    public float IntervalBetweenKeyboardClick { get; set; } = 20;
 
     public bool PrintDebug { get; set; } = false;
     public bool PrintInfo { get; set; } = true;
@@ -178,7 +178,6 @@ public class AppConfig
     [JsonIgnore] public VKCode VirtualRotateAntiClockwise { get; private set; }
     [JsonIgnore] public VKCode VirtualRotateClockwise { get; private set; }
     [JsonIgnore] public VKCode VirtualInsert { get; private set; }
-    [JsonIgnore] public VKCode VirtualWorkaround { get; private set; }
 
     [JsonIgnore] public int ScreenWidth { get; private set; }
     [JsonIgnore] public int ScreenHeight { get; private set; }
