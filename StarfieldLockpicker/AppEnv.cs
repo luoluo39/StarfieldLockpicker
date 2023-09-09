@@ -60,14 +60,10 @@ namespace StarfieldLockpicker
                 _ => throw new ArgumentOutOfRangeException(nameof(command), command, null)
             };
 
-            if (Stopwatch.GetElapsedTime(_lastClick).TotalMilliseconds > _config.IntervalBetweenKeyboardClick)
+            if (Stopwatch.GetElapsedTime(_lastClick).TotalMilliseconds < _config.IntervalBetweenKeyboardClick)
                 await Task.Delay((int)_config.IntervalBetweenKeyboardClick, cancellationToken);
 
             await Input.KeyboardKeyClickAsync(key, (int)_config.IntervalForKeyboardClick);
-            if (_config.EnableInputLoseWorkaround)
-            {
-                await Input.KeyboardKeyClickAsync(VKCode.S, (int)_config.IntervalForKeyboardClick);
-            }
             _lastClick = Stopwatch.GetTimestamp();
         }
 
