@@ -130,8 +130,8 @@ public class AppConfig
     public float IntervalForUIRefresh { get; set; } = 20;
     public float IntervalForCommandExecution { get; set; } = 20;
     public float IntervalForLayerCompleteAnimation { get; set; } = 1100;
-    public float IntervalForKeyboardClick { get; set; } = 10;
-    public float IntervalBetweenKeyboardClick { get; set; } = 10;
+    public float IntervalForKeyboardClick { get; set; } = 15;
+    public float IntervalBetweenKeyboardClick { get; set; } = 15;
 
     public bool EnableInputLoseWorkaround { get; set; } = false;
     public string KeyWithoutAnyFunction { get; set; } = "Num0";
