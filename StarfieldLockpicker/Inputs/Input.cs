@@ -82,4 +82,11 @@ public static class Input
         Thread.Sleep(interval);
         KeyboardKeyUp(key);
     }
+
+    public static async Task KeyboardKeyClickAsync(VKCode key, int interval)
+    {
+        KeyboardKeyDown(key);
+        await Task.Delay(interval);
+        KeyboardKeyUp(key);
+    }
 }

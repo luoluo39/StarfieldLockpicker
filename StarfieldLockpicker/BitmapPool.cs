@@ -5,15 +5,15 @@ namespace StarfieldLockpicker;
 
 public class BitmapPool
 {
-    public Size BitmapSize { get; }
+    public Rectangle BitmapRect { get; }
     public AppConfig Config { get; }
 
     private readonly ConcurrentBag<WrappedBitmap> bitmaps = new();
     private readonly ConcurrentBag<WrappedBitmap> allocated = new();
 
-    public BitmapPool(Size bitmapSize, AppConfig config)
+    public BitmapPool(Rectangle bitmapRect, AppConfig config)
     {
-        BitmapSize = bitmapSize;
+        BitmapRect = bitmapRect;
         Config = config;
     }
 
@@ -21,8 +21,8 @@ public class BitmapPool
     {
         if (!bitmaps.TryTake(out var result))
         {
-            result = new WrappedBitmap(new Bitmap(BitmapSize.Width, BitmapSize.Height, PixelFormat.Format32bppArgb),
-                Config);
+            result = new WrappedBitmap(new Bitmap(BitmapRect.Width, BitmapRect.Height, PixelFormat.Format32bppArgb),
+                Config, BitmapRect);
             allocated.Add(result);
         }
         return new(result, this);

@@ -6,32 +6,41 @@ namespace StarfieldLockpicker;
 public class WrappedBitmap : IFullImage
 {
     private readonly AppConfig _config;
-    private readonly Bitmap _bitmap;
     private bool _disposed;
 
-    public Bitmap Bitmap => _bitmap;
+    public Bitmap Bitmap { get; }
+    public Rectangle ScreenSpaceBounds { get; }
 
-    public WrappedBitmap(Bitmap bitmap, AppConfig config)
+    public WrappedBitmap(Bitmap bitmap, AppConfig config, Rectangle screenSpaceBounds)
     {
-        _bitmap = bitmap;
+        Bitmap = bitmap;
         _config = config;
+        ScreenSpaceBounds = screenSpaceBounds;
     }
 
     public void Dispose()
     {
         if (!_disposed)
         {
-            _bitmap.Dispose();
+            Bitmap.Dispose();
             _disposed = true;
         }
     }
 
     public double KeyAreaMseWith(IKeySelectionImage other)
     {
+        var rect = Utility.TranslateRectangleCeiling(
+            new Rectangle(
+                _config.KeyAreaX0, 
+                _config.KeyAreaY0, 
+                _config.KeyAreaWidth, 
+                _config.KeyAreaHeight)
+            );
+
         return other switch
         {
-            WrappedBitmap bitmap => Utility.CalculateKeyAreaMSE(_bitmap, bitmap._bitmap),
-            PooledWrappedBitmap bitmap2 => Utility.CalculateKeyAreaMSE(_bitmap, bitmap2.Inner._bitmap),
+            WrappedBitmap bitmap => Utility.CalculateMSE(this, bitmap, rect),
+            PooledWrappedBitmap bitmap2 => Utility.CalculateMSE(this, bitmap2.Inner, rect),
             _ => throw new NotSupportedException()
         };
     }
@@ -46,6 +55,10 @@ public class WrappedBitmap : IFullImage
         return GetKeyShape32();
     }
 
+    private Vector2 TranslateScreenPosition(Vector2 screenSpacePos)
+    {
+        return screenSpacePos - new Vector2(ScreenSpaceBounds.X, ScreenSpaceBounds.Y);
+    }
 
     private uint GetKeyShape32()
     {
@@ -55,7 +68,8 @@ public class WrappedBitmap : IFullImage
     private uint GetShape32(float circleRadius, float sampleRadius, float thr, bool print = false)
     {
         var center = new Vector2(_config.CircleCenterX, _config.CircleCenterY);
-        var scaledCenter = Utility.TranslatePosition(center);
+
+        var scaledCenter = TranslateScreenPosition(Utility.TranslatePosition(center));
         var scaledRadius = Utility.ScaleRadius(circleRadius);
         var scaledSampleRadius = Utility.ScaleRadius(sampleRadius);
 
@@ -65,7 +79,7 @@ public class WrappedBitmap : IFullImage
             var x = 2 * float.Pi * i / 32;
             var (sin, cos) = float.SinCos(x);
             var pos = new Vector2(cos, sin) * scaledRadius + scaledCenter;
-            var gray = Utility.CalculateMaxB(_bitmap, pos, scaledSampleRadius);
+            var gray = Utility.CalculateMaxB(Bitmap, pos, scaledSampleRadius);
 
             if (print) Console.Write($",{gray:F2}");
 
@@ -97,7 +111,7 @@ public class WrappedBitmap : IFullImage
     private uint GradGetShape32(float minRadius, float maxRadius, float sampleRadius, float stepLen, float thr, bool print = false)
     {
         var center = new Vector2(_config.CircleCenterX, _config.CircleCenterY);
-        var scaledCenter = Utility.TranslatePosition(center);
+        var scaledCenter = TranslateScreenPosition(Utility.TranslatePosition(center));
         var scaledMaxRadius = Utility.ScaleRadius(maxRadius);
         var scaledMinRadius = Utility.ScaleRadius(minRadius);
         var scaledStepLen = Utility.ScaleRadius(stepLen);
@@ -113,7 +127,7 @@ public class WrappedBitmap : IFullImage
             for (var s = scaledMinRadius; s < scaledMaxRadius; s += scaledStepLen)
             {
                 var pos = new Vector2(cos, sin) * s + scaledCenter;
-                var current = Utility.CalculateMaxB(_bitmap, pos, scaledSampleRadius);
+                var current = Utility.CalculateMaxB(Bitmap, pos, scaledSampleRadius);
 
                 if (!float.IsNaN(last) && print)
                 {

@@ -75,32 +75,15 @@ public class AppConfig
         result.ScreenUIHeight = result.ScreenUIScale * 9;
 
         var refCenter = new Vector2(result.ReferenceResolutionWidth, result.ReferenceResolutionHeight) / 2f;
-        var roiMin = refCenter;
-        var roiMax = refCenter;
+        var circleR = (result.CircleRadiusKey + result.SampleRadiusKey) + 2;
 
-        var circleR = Vector2.One * (result.CircleRadiusKey + result.SampleRadiusKey) * 1.05f;
-        roiMin = Vector2.Min(roiMin, refCenter - circleR);
-        roiMax = Vector2.Max(roiMax, refCenter + circleR);
+        var rocF = new RectangleF(refCenter.X - circleR, refCenter.Y - circleR, circleR + circleR,
+            circleR + circleR);
+        result.RegionOfCircle = Rectangle.Ceiling(rocF);
 
-        roiMin = Vector2.Min(roiMin, new Vector2(result.KeyAreaX0, result.KeyAreaY0));
-        roiMax = Vector2.Max(roiMax, new Vector2(result.KeyAreaX0 + result.KeyAreaWidth, result.KeyAreaY0 + result.KeyAreaHeight));
+        result.RegionOfKeySelection = new Rectangle(result.KeyAreaX0 - 1, result.KeyAreaY0 - 1, result.KeyAreaWidth + 2, result.KeyAreaHeight + 2);
 
-        roiMin = Utility.TranslatePosition(roiMin, result);
-        roiMax = Utility.TranslatePosition(roiMax, result);
-
-        var roiMinPoint = new Point
-        {
-            X = int.Max(0, (int)float.Floor(roiMin.X)),
-            Y = int.Max(0, (int)float.Floor(roiMin.Y))
-        };
-
-        var roiMaxPoint = new Point
-        {
-            X = int.Min(result.ScreenWidth, (int)float.Ceiling(roiMax.X)),
-            Y = int.Min(result.ScreenHeight, (int)float.Ceiling(roiMax.Y))
-        };
-
-        result.RegionOfInterest = new Rectangle(roiMinPoint, new Size(roiMaxPoint.X - roiMinPoint.X, roiMaxPoint.Y - roiMinPoint.Y));
+        result.RegionOfInterest = Rectangle.Union(result.RegionOfCircle, result.RegionOfKeySelection);
 
         VKCode vk;
         if (!Enum.TryParse(result.HotKey, true, out vk))
@@ -126,6 +109,13 @@ public class AppConfig
         if (!Enum.TryParse(result.KeyInsert, true, out vk))
             Utility.ConsoleError($"Key {result.KeyInsert} can not be parsed");
         result.VirtualInsert = vk;
+
+        if (result.EnableInputLoseWorkaround)
+        {
+            if (!Enum.TryParse(result.KeyWithoutAnyFunction, true, out vk))
+                Utility.ConsoleError($"Key {result.KeyWithoutAnyFunction} can not be parsed");
+            result.VirtualWorkaround = vk;
+        }
     }
 
     public int Display { get; set; } = 0;
@@ -142,6 +132,10 @@ public class AppConfig
     public float IntervalForLayerCompleteAnimation { get; set; } = 1100;
     public float IntervalForKeyboardClick { get; set; } = 10;
     public float IntervalBetweenKeyboardClick { get; set; } = 10;
+
+    public bool EnableInputLoseWorkaround { get; set; } = false;
+    public string KeyWithoutAnyFunction { get; set; } = "Num0";
+
 
     public bool PrintMaxColor0 { get; set; } = false;
     public bool PrintMaxColor1 { get; set; } = false;
@@ -187,6 +181,7 @@ public class AppConfig
     [JsonIgnore] public VKCode VirtualRotateAntiClockwise { get; private set; }
     [JsonIgnore] public VKCode VirtualRotateClockwise { get; private set; }
     [JsonIgnore] public VKCode VirtualInsert { get; private set; }
+    [JsonIgnore] public VKCode VirtualWorkaround { get; private set; }
 
     [JsonIgnore] public int ScreenWidth { get; private set; }
     [JsonIgnore] public int ScreenHeight { get; private set; }
@@ -197,4 +192,6 @@ public class AppConfig
     [JsonIgnore] public float ScreenUIWidth { get; private set; }
     [JsonIgnore] public float ScreenUIHeight { get; private set; }
     [JsonIgnore] public Rectangle RegionOfInterest { get; private set; }
+    [JsonIgnore] public Rectangle RegionOfCircle { get; private set; }
+    [JsonIgnore] public Rectangle RegionOfKeySelection { get; private set; }
 }

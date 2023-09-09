@@ -1,42 +1,49 @@
 ﻿using System.Diagnostics;
 using StarfieldLockpicker.Core;
+using StarfieldLockpicker.Inputs;
 
 namespace StarfieldLockpicker
 {
     public class AppEnv : ICoreInterface
     {
         private AppConfig _config;
-        private BitmapPool pool;
+        private BitmapPool fullSizePool;
+        private BitmapPool keyAreaPool;
+        private BitmapPool circleAreaPool;
 
         public AppEnv(AppConfig config)
         {
             _config = config;
-            pool = new BitmapPool(new Size(config.ScreenWidth, config.ScreenHeight), config);
+            fullSizePool = new BitmapPool(Utility.TranslateRectangleCeiling(config.RegionOfInterest), config);
+            keyAreaPool = new BitmapPool(Utility.TranslateRectangleCeiling(config.RegionOfKeySelection), config);
+            circleAreaPool = new BitmapPool(Utility.TranslateRectangleCeiling(config.RegionOfCircle), config);
         }
 
         public void ReleaseUnusedBitmaps()
         {
-            pool.ReleaseAll();
+            fullSizePool.ReleaseAll();
+            keyAreaPool.ReleaseAll();
+            circleAreaPool.ReleaseAll();
         }
 
         public Task<IFullImage> CaptureFullScreenAsync(CancellationToken cancellationToken)
         {
-            var bitmap = pool.Rent();
-            Utility.CaptureScreen(bitmap.Inner.Bitmap, _config.Display);
+            var bitmap = fullSizePool.Rent();
+            Utility.CaptureScreenArea(bitmap.Inner.Bitmap, _config.Display, fullSizePool.BitmapRect);
             return Task.FromResult((IFullImage)bitmap);
         }
 
         public Task<ILockImage> CaptureLockImageAsync(CancellationToken cancellationToken)
         {
-            var bitmap = pool.Rent();
-            Utility.CaptureScreen(bitmap.Inner.Bitmap, _config.Display);
+            var bitmap = circleAreaPool.Rent();
+            Utility.CaptureScreenArea(bitmap.Inner.Bitmap, _config.Display, circleAreaPool.BitmapRect);
             return Task.FromResult((ILockImage)bitmap);
         }
 
         public Task<IKeySelectionImage> CaptureKeyImageAsync(CancellationToken cancellationToken)
         {
-            var bitmap = pool.Rent();
-            Utility.CaptureScreen(bitmap.Inner.Bitmap, _config.Display);
+            var bitmap = keyAreaPool.Rent();
+            Utility.CaptureScreenArea(bitmap.Inner.Bitmap, _config.Display, keyAreaPool.BitmapRect);
             return Task.FromResult((IKeySelectionImage)bitmap);
         }
 
@@ -56,7 +63,11 @@ namespace StarfieldLockpicker
             if (Stopwatch.GetElapsedTime(_lastClick).TotalMilliseconds > _config.IntervalBetweenKeyboardClick)
                 await Task.Delay((int)_config.IntervalBetweenKeyboardClick, cancellationToken);
 
-            Inputs.Input.KeyboardKeyClick(key, (int)_config.IntervalForKeyboardClick);
+            await Input.KeyboardKeyClickAsync(key, (int)_config.IntervalForKeyboardClick);
+            if (_config.EnableInputLostWorkaround)
+            {
+                await Input.KeyboardKeyClickAsync(VKCode.S, (int)_config.IntervalForKeyboardClick);
+            }
             _lastClick = Stopwatch.GetTimestamp();
         }
 
