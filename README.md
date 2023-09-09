@@ -13,12 +13,6 @@ A simple tool that automaticly unlock locks in Starfield
 ## For multi-monitor users:
 In config, change display to the monitor id where your game is.
 
-## If you are experiencing errors caused by frequent keystrokes loss:
-
-(Symptoms include frequent lags and try many times to rotate to the correct position or select a specific key)
-
-Try setting *EnableInputLoseWorkaround* to *true*, and setting *IntervalForKeyboardClick* and *IntervalBetweenKeyboardClick* to a bigger value. (usually no more than 50)
-
 ## Notice:
 Programs running with administrator privileges will block hotkeys being registered by software running without administrator privileges. So, if this situation occurs, this tool will not function properly.
 Therefore, unless necessary, try to avoid running games (or any untrusted software) with administrator privileges!
