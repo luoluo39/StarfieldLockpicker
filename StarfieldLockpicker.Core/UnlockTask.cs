@@ -209,7 +209,7 @@ public class UnlockTask
             else
                 await core.RepeatCommandsAsync(InputCommand.RotateClockwise, delta, cancellationToken);
 
-            core.ConsoleDebug("rotate command sent. waiting for 1000ms");
+            core.ConsoleDebug("rotate command sent. waiting for effect");
             (var success, delta) = await core.WaitUntil(async () =>
             {
                 using var image = await core.CaptureLockImageAsync(cancellationToken);
@@ -253,7 +253,7 @@ public class UnlockTask
 
             await core.RepeatCommandsAsync(delta > 0 ? InputCommand.Next : InputCommand.Previous, Math.Abs(delta), cancellationToken);
 
-            core.ConsoleDebug("select command sent, waiting for 1000ms.");
+            core.ConsoleDebug("select command sent, waiting for effect.");
 
             (_, actualKeyIndex) = await core.WaitUntil(async () =>
             {

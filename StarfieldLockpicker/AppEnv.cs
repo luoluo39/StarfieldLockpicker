@@ -40,6 +40,7 @@ namespace StarfieldLockpicker
             return Task.FromResult((IKeySelectionImage)bitmap);
         }
 
+        private long _lastClick = 0;
         public async Task SendCommandAsync(InputCommand command, CancellationToken cancellationToken)
         {
             var key = command switch
@@ -52,8 +53,11 @@ namespace StarfieldLockpicker
                 _ => throw new ArgumentOutOfRangeException(nameof(command), command, null)
             };
 
-            Inputs.Input.KeyboardKeyClick(key, 10);
-            await Task.Delay(10, cancellationToken);
+            if (Stopwatch.GetElapsedTime(_lastClick).TotalMilliseconds > _config.IntervalBetweenKeyboardClick)
+                await Task.Delay((int)_config.IntervalBetweenKeyboardClick, cancellationToken);
+
+            Inputs.Input.KeyboardKeyClick(key, (int)_config.IntervalForKeyboardClick);
+            _lastClick = Stopwatch.GetTimestamp();
         }
 
         public async Task SendCommandsAsync(InputCommand[] commands, CancellationToken cancellationToken)

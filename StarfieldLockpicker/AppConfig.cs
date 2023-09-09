@@ -136,6 +136,13 @@ public class AppConfig
     public string KeyRotateClockwise { get; set; } = "D";
     public string KeyInsert { get; set; } = "E";
 
+    public float ResponseWaitTimeout { get; set; } = 1000;
+    public float IntervalForUIRefresh { get; set; } = 20;
+    public float IntervalForCommandExecution { get; set; } = 20;
+    public float IntervalForLayerCompleteAnimation { get; set; } = 1100;
+    public float IntervalForKeyboardClick { get; set; } = 10;
+    public float IntervalBetweenKeyboardClick { get; set; } = 10;
+
     public bool PrintMaxColor0 { get; set; } = false;
     public bool PrintMaxColor1 { get; set; } = false;
     public bool PrintMaxColor2 { get; set; } = false;
@@ -170,11 +177,6 @@ public class AppConfig
 
     public int ReferenceResolutionWidth { get; set; } = 1920;
     public int ReferenceResolutionHeight { get; set; } = 1080;
-
-    public float ResponseWaitTimeout { get; set; } = 1000;
-    public float IntervalForUIRefresh { get; set; } = 20;
-    public float IntervalForCommandExecution { get; set; } = 20;
-    public float IntervalForLayerCompleteAnimation { get; set; } = 1100;
 
     public double ImageMseThr { get; set; } = 45;
 
