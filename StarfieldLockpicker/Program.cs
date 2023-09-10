@@ -18,9 +18,15 @@ internal static class Program
         Application.SetHighDpiMode(HighDpiMode.SystemAware);
         //no async method usage here because message loop need to run on main thread
         //ensure that the config is loaded
+        AppConfig? config;
         try
         {
-            _ = AppConfig.Instance;
+            if (!AppConfig.TryLoadOrCreateConfig("config.json", out config))
+            {
+                Console.WriteLine("Failed to load config.");
+                Console.ReadLine();
+                return;
+            }
         }
         catch (Exception e)
         {
@@ -28,9 +34,9 @@ internal static class Program
             Console.ReadLine();
             return;
         }
-        messageWindow = new MessageWindow();
+        messageWindow = new MessageWindow(config.VirtualHotKey);
 
-        core = new AppEnv(AppConfig.Instance);
+        core = new AppEnv(config);
         messageWindow.OnHoyKeyPressed += MessageWindow_OnHoyKeyPressed;
 
         Application.Run(messageWindow);

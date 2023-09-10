@@ -14,9 +14,9 @@ namespace StarfieldLockpicker
         public AppEnv(AppConfig config)
         {
             _config = config;
-            fullSizePool = new BitmapPool(Utility.TranslateRectangleCeiling(config.RegionOfInterest), config);
-            keyAreaPool = new BitmapPool(Utility.TranslateRectangleCeiling(config.RegionOfKeySelection), config);
-            circleAreaPool = new BitmapPool(Utility.TranslateRectangleCeiling(config.RegionOfCircle), config);
+            fullSizePool = new BitmapPool(config.TranslateRectangleCeiling(config.RegionOfInterest), config);
+            keyAreaPool = new BitmapPool(config.TranslateRectangleCeiling(config.RegionOfKeySelection), config);
+            circleAreaPool = new BitmapPool(config.TranslateRectangleCeiling(config.RegionOfCircle), config);
         }
 
         public void ReleaseUnusedBitmaps()
@@ -149,6 +149,6 @@ namespace StarfieldLockpicker
                 Utility.ConsoleDebug(str);
         }
 
-        public double MseThr => AppConfig.Instance.ImageMseThr;
+        public double MseThr => _config.ImageMseThr;
     }
 }

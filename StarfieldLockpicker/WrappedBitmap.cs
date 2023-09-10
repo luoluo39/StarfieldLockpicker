@@ -29,7 +29,7 @@ public class WrappedBitmap : IFullImage
 
     public double KeyAreaMseWith(IKeySelectionImage other)
     {
-        var rect = Utility.TranslateRectangleCeiling(
+        var rect = _config.TranslateRectangleCeiling(
             new Rectangle(
                 _config.KeyAreaX0, 
                 _config.KeyAreaY0, 
@@ -69,9 +69,9 @@ public class WrappedBitmap : IFullImage
     {
         var center = new Vector2(_config.CircleCenterX, _config.CircleCenterY);
 
-        var scaledCenter = TranslateScreenPosition(Utility.TranslatePosition(center));
-        var scaledRadius = Utility.ScaleRadius(circleRadius);
-        var scaledSampleRadius = Utility.ScaleRadius(sampleRadius);
+        var scaledCenter = TranslateScreenPosition(_config.TranslatePosition(center));
+        var scaledRadius = _config.ScaleRadius(circleRadius);
+        var scaledSampleRadius = _config.ScaleRadius(sampleRadius);
 
         uint v = 0;
         for (var i = 0; i < 32; i++)
@@ -111,11 +111,11 @@ public class WrappedBitmap : IFullImage
     private uint GradGetShape32(float minRadius, float maxRadius, float sampleRadius, float stepLen, float thr, bool print = false)
     {
         var center = new Vector2(_config.CircleCenterX, _config.CircleCenterY);
-        var scaledCenter = TranslateScreenPosition(Utility.TranslatePosition(center));
-        var scaledMaxRadius = Utility.ScaleRadius(maxRadius);
-        var scaledMinRadius = Utility.ScaleRadius(minRadius);
-        var scaledStepLen = Utility.ScaleRadius(stepLen);
-        var scaledSampleRadius = Utility.ScaleRadius(sampleRadius);
+        var scaledCenter = TranslateScreenPosition(_config.TranslatePosition(center));
+        var scaledMaxRadius = _config.ScaleRadius(maxRadius);
+        var scaledMinRadius = _config.ScaleRadius(minRadius);
+        var scaledStepLen = _config.ScaleRadius(stepLen);
+        var scaledSampleRadius = _config.ScaleRadius(sampleRadius);
 
         uint v = 0;
         for (var i = 0; i < 32; i++)

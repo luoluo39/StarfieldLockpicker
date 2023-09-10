@@ -5,41 +5,37 @@ namespace StarfieldLockpicker;
 
 public static class Utility
 {
-    public static RectangleF TranslateRectangleF(RectangleF rectInReference, AppConfig? config = null)
+    public static RectangleF TranslateRectangleF(this AppConfig config, RectangleF rectInReference)
     {
-        config ??= AppConfig.Instance;
-
         var min = new Vector2(rectInReference.X, rectInReference.Y);
         var max = new Vector2(rectInReference.Right, rectInReference.Bottom);
 
-        var tMin = TranslatePosition(min, config);
-        var tMax = TranslatePosition(max, config);
+        var tMin = config.TranslatePosition(min);
+        var tMax = config.TranslatePosition(max);
 
         return new RectangleF(tMin.X, tMin.Y, tMax.X - tMin.X, tMax.Y - tMin.Y);
     }
 
-    public static Rectangle TranslateRectangleCeiling(RectangleF rectInReference, AppConfig? config = null)
+    public static Rectangle TranslateRectangleCeiling(this AppConfig config, RectangleF rectInReference)
     {
-        var translated = TranslateRectangleF(rectInReference, config);
+        var translated = config.TranslateRectangleF(rectInReference);
         var tMin = new Point((int)translated.X, (int)translated.Y);
         var tMax = new Point((int)float.Ceiling(translated.Right), (int)float.Ceiling(translated.Bottom));
 
         return new Rectangle(tMin.X, tMin.Y, tMax.X - tMin.X, tMax.Y - tMin.Y);
     }
 
-    public static Rectangle TranslateRectangleCeiling(Rectangle rectInReference, AppConfig? config = null)
+    public static Rectangle TranslateRectangleCeiling(this AppConfig config, Rectangle rectInReference)
     {
-        var translated = TranslateRectangleF(rectInReference, config);
+        var translated = config.TranslateRectangleF(rectInReference);
         var tMin = new Point((int)translated.X, (int)translated.Y);
         var tMax = new Point((int)float.Ceiling(translated.Right), (int)float.Ceiling(translated.Bottom));
 
         return new Rectangle(tMin.X, tMin.Y, tMax.X - tMin.X, tMax.Y - tMin.Y);
     }
 
-    public static Vector2 TranslatePosition(Vector2 posInReference, AppConfig? config = null)
+    public static Vector2 TranslatePosition(this AppConfig config, Vector2 posInReference)
     {
-        config ??= AppConfig.Instance;
-
         //translate pos from reference pos to (-1,1)
         var rx = (posInReference.X * 2 - config.ReferenceResolutionWidth) / config.ReferenceUIWidth;
         var ry = (posInReference.Y * 2 - config.ReferenceResolutionHeight) / config.ReferenceUIHeight;
@@ -51,13 +47,11 @@ public static class Utility
         return new Vector2(x, y);
     }
 
-    public static float ScaleRadius(float value, AppConfig? config = null)
+    public static float ScaleRadius(this AppConfig config, float value)
     {
-        config ??= AppConfig.Instance;
-
         return value * config.ScreenUIScale / config.ReferenceUIScale;
     }
-    
+
     public static void CaptureScreenArea(Bitmap bitmap, int display, Rectangle rect)
     {
         if (bitmap.Size != rect.Size)
@@ -81,12 +75,12 @@ public static class Utility
 
         var data1 = bmp1.Bitmap.LockBits(
             new Rectangle(point1, rectangle.Size),
-            ImageLockMode.ReadOnly, 
+            ImageLockMode.ReadOnly,
             PixelFormat.Format32bppArgb
             );
 
         var data2 = bmp2.Bitmap.LockBits(
-            new Rectangle(point2, rectangle.Size), 
+            new Rectangle(point2, rectangle.Size),
             ImageLockMode.ReadOnly,
             PixelFormat.Format32bppArgb
             );

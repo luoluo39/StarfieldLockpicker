@@ -7,16 +7,12 @@ public class MessageWindow : Form
 {
     public event Action? OnHoyKeyPressed;
 
-    public MessageWindow()
+    public MessageWindow(VKCode hotKey)
     {
-        if (!Enum.TryParse<VKCode>(AppConfig.Instance.HotKey, true, out var vk))
-        {
-            Console.WriteLine($"The key {AppConfig.Instance.HotKey} can not be parsed");
-        }
-        if (!PInvoke.RegisterHotKey((HWND)Handle, 0, 0, (uint)vk))
+        if (!PInvoke.RegisterHotKey((HWND)Handle, 0, 0, (uint)hotKey))
         {
             PInvoke.UnregisterHotKey(HWND.Null, 0);
-            Console.WriteLine($"The hotkey {vk} is in use! this may caused by other programs with same key, or running more than one instance of this program. try close all instances, wait for several seconds, and start again, or change hotkey in config");
+            Console.WriteLine($"The hotkey {hotKey} is in use! this may caused by other programs with same key, or running more than one instance of this program. try close all instances, wait for several seconds, and start again, or change hotkey in config");
         }
     }
 
