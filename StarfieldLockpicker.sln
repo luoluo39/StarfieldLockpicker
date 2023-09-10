@@ -15,6 +15,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestSite", "TestSite\TestSi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StarfieldLockpicker.Core", "StarfieldLockpicker.Core\StarfieldLockpicker.Core.csproj", "{B88C37BC-C9FA-4EBF-B636-9A49749B08CA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceBenchmarks", "PerformanceBenchmarks\PerformanceBenchmarks.csproj", "{48473914-F221-424D-859E-0230C14BD3D9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{B88C37BC-C9FA-4EBF-B636-9A49749B08CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B88C37BC-C9FA-4EBF-B636-9A49749B08CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B88C37BC-C9FA-4EBF-B636-9A49749B08CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48473914-F221-424D-859E-0230C14BD3D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48473914-F221-424D-859E-0230C14BD3D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48473914-F221-424D-859E-0230C14BD3D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48473914-F221-424D-859E-0230C14BD3D9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

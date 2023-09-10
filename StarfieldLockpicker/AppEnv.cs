@@ -47,7 +47,7 @@ namespace StarfieldLockpicker
             return Task.FromResult((IKeySelectionImage)bitmap);
         }
 
-        private long _lastClick = 0;
+        private PrecisionTimer _clickTimer;
         public async Task SendCommandAsync(InputCommand command, CancellationToken cancellationToken)
         {
             var key = command switch
@@ -60,11 +60,11 @@ namespace StarfieldLockpicker
                 _ => throw new ArgumentOutOfRangeException(nameof(command), command, null)
             };
 
-            if (Stopwatch.GetElapsedTime(_lastClick).TotalMilliseconds < _config.IntervalBetweenKeyboardClick)
-                await Task.Delay((int)_config.IntervalBetweenKeyboardClick, cancellationToken);
+            _clickTimer.Wait(cancellationToken);
 
             await Input.KeyboardKeyClickAsync(key, (int)_config.IntervalForKeyboardClick);
-            _lastClick = Stopwatch.GetTimestamp();
+
+            _clickTimer = new(TimeSpan.FromMilliseconds(_config.IntervalBetweenKeyboardClick));
         }
 
         public async Task SendCommandsAsync(InputCommand[] commands, CancellationToken cancellationToken)
@@ -77,7 +77,7 @@ namespace StarfieldLockpicker
 
         public async Task RepeatCommandsAsync(InputCommand command, int times, CancellationToken cancellationToken)
         {
-            for (int i = 0; i < times; i++)
+            for (var i = 0; i < times; i++)
             {
                 await SendCommandAsync(command, cancellationToken);
             }
@@ -93,7 +93,7 @@ namespace StarfieldLockpicker
                 _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null)
             };
 
-            return Task.Delay(time, cancellationToken);
+            return DelayInternal(time, cancellationToken);
         }
 
         public async Task<bool> WaitUntil(Func<Task<bool>> condition, DelayReason reason, CancellationToken cancellationToken)
@@ -124,6 +124,15 @@ namespace StarfieldLockpicker
             }
         }
 
+        public Task DelayInternal(TimeSpan time, CancellationToken cancellationToken)
+        {
+            if (_config.EnablePreciseDelay)
+            {
+                PrecisionTimer.Wait(time, cancellationToken);
+                return Task.CompletedTask;
+            }
+            return Task.Delay(time, cancellationToken);
+        }
 
         public void ConsoleError(string str)
         {
