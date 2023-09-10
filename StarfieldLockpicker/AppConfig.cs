@@ -110,7 +110,7 @@ public class AppConfig
     public float IntervalForKeyboardClick { get; set; } = 16;
     public float IntervalBetweenKeyboardClick { get; set; } = 20;
     
-    public bool EnablePrecisionDelay { get; set; } = false;
+    public bool EnablePreciseDelay { get; set; } = false;
 
     public bool PrintDebug { get; set; } = false;
     public bool PrintInfo { get; set; } = true;

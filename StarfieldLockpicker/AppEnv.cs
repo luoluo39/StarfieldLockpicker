@@ -124,7 +124,7 @@ namespace StarfieldLockpicker
             }
         }
 
-        public Task DelayInternal(TimeSpan time, CancellationToken cancellationToken)
+        private Task DelayInternal(TimeSpan time, CancellationToken cancellationToken)
         {
             if (_config.EnablePreciseDelay)
             {
