@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Windows.Win32;
 using StarfieldLockpicker.Inputs;
 using System.Threading;
+using Windows.Win32.UI.Input.KeyboardAndMouse;
 
 namespace StarfieldLockpicker;
 
@@ -51,9 +52,12 @@ public class AppConfig
     private void ParseKeys()
     {
         VKCode vk;
-        if (!Enum.TryParse(HotKey, true, out vk))
-            Utility.ConsoleError($"Key {HotKey} can not be parsed");
+
+        var hotKeyStr = HotKey.Split('+').Last();
+        if (!Enum.TryParse(hotKeyStr, true, out vk))
+            Utility.ConsoleError($"Key {hotKeyStr} can not be parsed");
         VirtualHotKey = vk;
+        HotKeyModifier = (uint)ParseHotKeyModifiers(HotKey);
 
         if (!Enum.TryParse(KeyPrevious, true, out vk))
             Utility.ConsoleError($"Key {KeyPrevious} can not be parsed");
@@ -75,6 +79,18 @@ public class AppConfig
             Utility.ConsoleError($"Key {KeyInsert} can not be parsed");
         VirtualInsert = vk;
     }
+
+    private static HOT_KEY_MODIFIERS ParseHotKeyModifiers(string hotKey) =>
+        hotKey.Split('+')
+            .SkipLast(1)
+            .Aggregate<string, HOT_KEY_MODIFIERS>(0, (current, key) => current | key.ToLower() switch
+            {
+                "ctrl" => HOT_KEY_MODIFIERS.MOD_CONTROL,
+                "alt" => HOT_KEY_MODIFIERS.MOD_ALT,
+                "shift" => HOT_KEY_MODIFIERS.MOD_SHIFT,
+                "win" => HOT_KEY_MODIFIERS.MOD_WIN,
+                _ => 0
+            });
 
     private bool Init()
     {
@@ -190,6 +206,8 @@ public class AppConfig
 
 
     [JsonIgnore] public VKCode VirtualHotKey { get; private set; }
+    [JsonIgnore] public uint HotKeyModifier { get; private set; }
+
     [JsonIgnore] public VKCode VirtualPrevious { get; private set; }
     [JsonIgnore] public VKCode VirtualNext { get; private set; }
     [JsonIgnore] public VKCode VirtualRotateAntiClockwise { get; private set; }

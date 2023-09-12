@@ -1,5 +1,6 @@
 ﻿using Windows.Win32;
 using Windows.Win32.Foundation;
+using Windows.Win32.UI.Input.KeyboardAndMouse;
 using StarfieldLockpicker;
 using StarfieldLockpicker.Inputs;
 
@@ -7,9 +8,9 @@ public class MessageWindow : Form
 {
     public event Action? OnHoyKeyPressed;
 
-    public MessageWindow(VKCode hotKey)
+    public MessageWindow(VKCode hotKey, uint modifiers)
     {
-        if (!PInvoke.RegisterHotKey((HWND)Handle, 0, 0, (uint)hotKey))
+        if (!PInvoke.RegisterHotKey((HWND)Handle, 0, (HOT_KEY_MODIFIERS)modifiers, (uint)hotKey))
         {
             PInvoke.UnregisterHotKey(HWND.Null, 0);
             Console.WriteLine($"The hotkey {hotKey} is in use! this may caused by other programs with same key, or running more than one instance of this program. try close all instances, wait for several seconds, and start again, or change hotkey in config");

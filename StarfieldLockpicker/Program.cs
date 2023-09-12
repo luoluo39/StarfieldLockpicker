@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Windows.Win32.UI.Input.KeyboardAndMouse;
 using StarfieldLockpicker;
 using StarfieldLockpicker.Core;
 
@@ -33,7 +34,7 @@ internal static class Program
             config = AppConfig.CreateDefaultConfig(stream, false);
         }
 
-        messageWindow = new MessageWindow(config.VirtualHotKey);
+        messageWindow = new MessageWindow(config.VirtualHotKey, config.HotKeyModifier | (uint)HOT_KEY_MODIFIERS.MOD_NOREPEAT);
 
         messageWindow.OnHoyKeyPressed += MessageWindow_OnHoyKeyPressed;
 
