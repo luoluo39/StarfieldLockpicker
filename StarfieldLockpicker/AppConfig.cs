@@ -2,100 +2,134 @@
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Windows.Win32;
 using StarfieldLockpicker.Inputs;
+using System.Threading;
 
 namespace StarfieldLockpicker;
 
 [Serializable]
 public class AppConfig
 {
-    public static bool TryLoadOrCreateConfig(string configPath, [NotNullWhen(true)] out AppConfig? result)
+    public static AppConfig CreateDefaultConfig(Stream utf8Json, bool init)
     {
-        if (File.Exists(configPath))
-        {
-            var text = File.ReadAllText(configPath);
-            try
-            {
-                var deserialized = JsonSerializer.Deserialize<AppConfig>(text, new JsonSerializerOptions
-                {
-                    ReadCommentHandling = JsonCommentHandling.Skip
-                }) ?? throw new NullReferenceException("null deserialized");
+        var result = new AppConfig();
+        result.ParseKeys();
+        if (init)
+            result.Init();
 
-                Console.WriteLine("config loaded");
-                result = deserialized;
-                Init(result);
-                return true;
-            }
-            catch (Exception e)
+        JsonSerializer.Serialize(utf8Json, result, new JsonSerializerOptions { WriteIndented = true });
+
+        return result;
+    }
+
+    public static bool TryLoadConfig(string text, bool init, [NotNullWhen(true)] out AppConfig? result)
+    {
+        try
+        {
+            var deserialized = JsonSerializer.Deserialize<AppConfig>(text, new JsonSerializerOptions
             {
-                Console.WriteLine("failed to load config!");
-                Console.WriteLine(e);
-                result = null;
+                ReadCommentHandling = JsonCommentHandling.Skip
+            }) ?? throw new NullReferenceException("null deserialized");
+
+            Console.WriteLine("config loaded");
+            result = deserialized;
+            result.ParseKeys();
+            if (init && !result.Init())
                 return false;
-            }
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("failed to load config!");
+            Console.WriteLine(e);
+            result = null;
+            return false;
+        }
+    }
+
+    private void ParseKeys()
+    {
+        VKCode vk;
+        if (!Enum.TryParse(HotKey, true, out vk))
+            Utility.ConsoleError($"Key {HotKey} can not be parsed");
+        VirtualHotKey = vk;
+
+        if (!Enum.TryParse(KeyPrevious, true, out vk))
+            Utility.ConsoleError($"Key {KeyPrevious} can not be parsed");
+        VirtualPrevious = vk;
+
+        if (!Enum.TryParse(KeyNext, true, out vk))
+            Utility.ConsoleError($"Key {KeyNext} can not be parsed");
+        VirtualNext = vk;
+
+        if (!Enum.TryParse(KeyRotateAntiClockwise, true, out vk))
+            Utility.ConsoleError($"Key {KeyRotateAntiClockwise} can not be parsed");
+        VirtualRotateAntiClockwise = vk;
+
+        if (!Enum.TryParse(KeyRotateClockwise, true, out vk))
+            Utility.ConsoleError($"Key {KeyRotateClockwise} can not be parsed");
+        VirtualRotateClockwise = vk;
+
+        if (!Enum.TryParse(KeyInsert, true, out vk))
+            Utility.ConsoleError($"Key {KeyInsert} can not be parsed");
+        VirtualInsert = vk;
+    }
+
+    private bool Init()
+    {
+        var hWnd = PInvoke.FindWindow(null, GameWindowTitle);
+        if (hWnd.IsNull)
+        {
+            Console.WriteLine($"Error: cant find a window named '{GameWindowTitle}'");
+            return false;
         }
 
-        result = new AppConfig();
-        {
-            Init(result);
-        }
-        var serialized = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(configPath, serialized);
-        Console.WriteLine("no config found, creating default config.");
+        PInvoke.GetWindowRect(hWnd, out var rect);
+
+        Console.WriteLine($"ClientRect: {rect.X},{rect.Y},{rect.Width},{rect.Height}");
+
+        UpdateResolution(rect);
         return true;
     }
 
-    private static void Init(AppConfig result)
+    private void UpdateResolution(Rectangle clientRect)
     {
-        var screenSize = Screen.AllScreens[result.Display].Bounds.Size;
-        result.ScreenWidth = screenSize.Width;
-        result.ScreenHeight = screenSize.Height;
+        ClientRect = clientRect;
+        var clientScale = Math.Min(clientRect.Width / 16f, clientRect.Height / 9f) / Math.Min(ReferenceResolutionWidth / 16f, ReferenceResolutionHeight / 9f);
 
-        result.ReferenceUIScale = Math.Min(result.ReferenceResolutionWidth / 16f, result.ReferenceResolutionHeight / 9f);
-        result.ReferenceUIWidth = result.ReferenceUIScale * 16;
-        result.ReferenceUIHeight = result.ReferenceUIScale * 9;
-        result.ScreenUIScale = Math.Min(result.ScreenWidth / 16f, result.ScreenHeight / 9f);
-        result.ScreenUIWidth = result.ScreenUIScale * 16;
-        result.ScreenUIHeight = result.ScreenUIScale * 9;
+        var ax = clientScale;
+        var bx = (ClientRect.Width - ReferenceResolutionWidth * clientScale) / 2 + ClientRect.X;
 
-        var refCenter = new Vector2(result.ReferenceResolutionWidth, result.ReferenceResolutionHeight) / 2f;
-        var circleR = (result.CircleRadiusKey + result.SampleRadiusKey) + 2;
+        var ay = clientScale;
+        var by = (ClientRect.Height - ReferenceResolutionHeight * clientScale) / 2 + ClientRect.Y;
+
+        ClientScale = clientScale;
+        ClientMatrix = new Matrix3x2(
+            ax, 0,
+            0, ay,
+            bx, by
+            );
+
+        var refCenter = new Vector2(ReferenceResolutionWidth, ReferenceResolutionHeight) / 2f;
+        var circleR = (CircleRadiusKey + SampleRadiusKey) + 2;
 
         var rocF = new RectangleF(refCenter.X - circleR, refCenter.Y - circleR, circleR + circleR,
             circleR + circleR);
-        result.RegionOfCircle = Rectangle.Ceiling(rocF);
+        var regionOfCircle = Rectangle.Ceiling(rocF);
 
-        result.RegionOfKeySelection = new Rectangle(result.KeyAreaX0 - 1, result.KeyAreaY0 - 1, result.KeyAreaWidth + 2, result.KeyAreaHeight + 2);
+        var regionOfKeySelection = new Rectangle(KeyAreaX0 - 1, KeyAreaY0 - 1, KeyAreaWidth + 2, KeyAreaHeight + 2);
 
-        result.RegionOfInterest = Rectangle.Union(result.RegionOfCircle, result.RegionOfKeySelection);
+        var regionOfInterest = Rectangle.Union(regionOfCircle, regionOfKeySelection);
 
-        VKCode vk;
-        if (!Enum.TryParse(result.HotKey, true, out vk))
-            Utility.ConsoleError($"Key {result.HotKey} can not be parsed");
-        result.VirtualHotKey = vk;
-
-        if (!Enum.TryParse(result.KeyPrevious, true, out vk))
-            Utility.ConsoleError($"Key {result.KeyPrevious} can not be parsed");
-        result.VirtualPrevious = vk;
-
-        if (!Enum.TryParse(result.KeyNext, true, out vk))
-            Utility.ConsoleError($"Key {result.KeyNext} can not be parsed");
-        result.VirtualNext = vk;
-
-        if (!Enum.TryParse(result.KeyRotateAntiClockwise, true, out vk))
-            Utility.ConsoleError($"Key {result.KeyRotateAntiClockwise} can not be parsed");
-        result.VirtualRotateAntiClockwise = vk;
-
-        if (!Enum.TryParse(result.KeyRotateClockwise, true, out vk))
-            Utility.ConsoleError($"Key {result.KeyRotateClockwise} can not be parsed");
-        result.VirtualRotateClockwise = vk;
-
-        if (!Enum.TryParse(result.KeyInsert, true, out vk))
-            Utility.ConsoleError($"Key {result.KeyInsert} can not be parsed");
-        result.VirtualInsert = vk;
+        ClientRegionOfInterest = this.TranslateRectangleCeiling(regionOfInterest);
+        ClientRegionOfKeySelection = this.TranslateRectangleCeiling(regionOfKeySelection);
+        ClientRegionOfCircle = this.TranslateRectangleCeiling(regionOfCircle);
     }
 
-    public int Display { get; set; } = 0;
+    public event Action<Size>? OnResolutionChanged;
+
+    public string GameWindowTitle { get; set; } = "Starfield";
     public string HotKey { get; set; } = "F10";
     public string KeyPrevious { get; set; } = "Q";
     public string KeyNext { get; set; } = "T";
@@ -109,7 +143,7 @@ public class AppConfig
     public float IntervalForLayerCompleteAnimation { get; set; } = 20;
     public float IntervalForKeyboardClick { get; set; } = 16;
     public float IntervalBetweenKeyboardClick { get; set; } = 20;
-    
+
     public bool EnablePreciseDelay { get; set; } = false;
 
     public bool PrintDebug { get; set; } = false;
@@ -162,15 +196,12 @@ public class AppConfig
     [JsonIgnore] public VKCode VirtualRotateClockwise { get; private set; }
     [JsonIgnore] public VKCode VirtualInsert { get; private set; }
 
-    [JsonIgnore] public int ScreenWidth { get; private set; }
-    [JsonIgnore] public int ScreenHeight { get; private set; }
-    [JsonIgnore] public float ReferenceUIScale { get; private set; }
-    [JsonIgnore] public float ReferenceUIWidth { get; private set; }
-    [JsonIgnore] public float ReferenceUIHeight { get; private set; }
-    [JsonIgnore] public float ScreenUIScale { get; private set; }
-    [JsonIgnore] public float ScreenUIWidth { get; private set; }
-    [JsonIgnore] public float ScreenUIHeight { get; private set; }
-    [JsonIgnore] public Rectangle RegionOfInterest { get; private set; }
-    [JsonIgnore] public Rectangle RegionOfCircle { get; private set; }
-    [JsonIgnore] public Rectangle RegionOfKeySelection { get; private set; }
+
+    [JsonIgnore] public Rectangle ClientRect { get; private set; }
+    [JsonIgnore] public Matrix3x2 ClientMatrix { get; private set; }
+    [JsonIgnore] public float ClientScale { get; private set; }
+
+    [JsonIgnore] public Rectangle ClientRegionOfInterest { get; private set; }
+    [JsonIgnore] public Rectangle ClientRegionOfCircle { get; private set; }
+    [JsonIgnore] public Rectangle ClientRegionOfKeySelection { get; private set; }
 }

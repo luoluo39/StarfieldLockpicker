@@ -1,5 +1,6 @@
 ﻿using System.Drawing.Imaging;
 using System.Numerics;
+using Windows.Win32;
 
 namespace StarfieldLockpicker;
 
@@ -13,7 +14,7 @@ public static class Utility
         var tMin = config.TranslatePosition(min);
         var tMax = config.TranslatePosition(max);
 
-        return new RectangleF(tMin.X, tMin.Y, tMax.X - tMin.X, tMax.Y - tMin.Y);
+        return RectangleF.FromLTRB(tMin.X, tMin.Y, tMax.X, tMax.Y);
     }
 
     public static Rectangle TranslateRectangleCeiling(this AppConfig config, RectangleF rectInReference)
@@ -22,7 +23,7 @@ public static class Utility
         var tMin = new Point((int)translated.X, (int)translated.Y);
         var tMax = new Point((int)float.Ceiling(translated.Right), (int)float.Ceiling(translated.Bottom));
 
-        return new Rectangle(tMin.X, tMin.Y, tMax.X - tMin.X, tMax.Y - tMin.Y);
+        return Rectangle.FromLTRB(tMin.X, tMin.Y, tMax.X, tMax.Y);
     }
 
     public static Rectangle TranslateRectangleCeiling(this AppConfig config, Rectangle rectInReference)
@@ -31,39 +32,55 @@ public static class Utility
         var tMin = new Point((int)translated.X, (int)translated.Y);
         var tMax = new Point((int)float.Ceiling(translated.Right), (int)float.Ceiling(translated.Bottom));
 
-        return new Rectangle(tMin.X, tMin.Y, tMax.X - tMin.X, tMax.Y - tMin.Y);
+        return Rectangle.FromLTRB(tMin.X, tMin.Y, tMax.X, tMax.Y);
     }
 
     public static Vector2 TranslatePosition(this AppConfig config, Vector2 posInReference)
     {
-        //translate pos from reference pos to (-1,1)
-        var rx = (posInReference.X * 2 - config.ReferenceResolutionWidth) / config.ReferenceUIWidth;
-        var ry = (posInReference.Y * 2 - config.ReferenceResolutionHeight) / config.ReferenceUIHeight;
-
-        //translate pos from (-1,1) to screen pos
-        var x = (rx * config.ScreenUIWidth + config.ScreenWidth) / 2;
-        var y = (ry * config.ScreenUIHeight + config.ScreenHeight) / 2;
-
-        return new Vector2(x, y);
+        return Vector2.Transform(posInReference, config.ClientMatrix);
     }
+
+    public static Rectangle Slice(this Rectangle rect, Rectangle subRect)
+    {
+        var minX = rect.X + subRect.X;
+        var minY = rect.Y + subRect.Y;
+
+        var width = subRect.Width;
+        var height = subRect.Height;
+
+        if (minX + width >= subRect.Right || minY + height >= subRect.Bottom)
+            throw new ArgumentOutOfRangeException(nameof(subRect));
+
+        return new(minX, minY, width, height);
+    }
+
+    public static RectangleF Slice(this RectangleF rect, RectangleF subRect)
+    {
+        var minX = rect.X + subRect.X;
+        var minY = rect.Y + subRect.Y;
+
+        var width = subRect.Width;
+        var height = subRect.Height;
+
+        if (minX + width >= subRect.Right || minY + height >= subRect.Bottom)
+            throw new ArgumentOutOfRangeException(nameof(subRect));
+
+        return new(minX, minY, width, height);
+    }
+
 
     public static float ScaleRadius(this AppConfig config, float value)
     {
-        return value * config.ScreenUIScale / config.ReferenceUIScale;
+        return value * config.ClientScale;
     }
 
-    public static void CaptureScreenArea(Bitmap bitmap, int display, Rectangle rect)
+    public static void CaptureScreenArea(Bitmap bitmap, Rectangle rect)
     {
         if (bitmap.Size != rect.Size)
             throw new ArgumentException(nameof(bitmap));
 
-        var bounds = Screen.AllScreens[display].Bounds;
-        var w = Math.Min(rect.Width, bounds.Width - rect.X);
-        var h = Math.Min(rect.Height, bounds.Height - rect.Y);
-        var captureRectangle = new Rectangle(bounds.X + rect.X, bounds.Y + rect.Y, w, h);
-
         using var captureGraphics = Graphics.FromImage(bitmap);
-        captureGraphics.CopyFromScreen(captureRectangle.Left, captureRectangle.Top, 0, 0, captureRectangle.Size);
+        captureGraphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, rect.Size);
     }
 
     public static double CalculateMSE(WrappedBitmap bmp1, WrappedBitmap bmp2, Rectangle rectangle)

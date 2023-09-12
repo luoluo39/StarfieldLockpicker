@@ -4,3 +4,5 @@ MapVirtualKey
 WM_HOTKEY
 SendInput
 keybd_event
+FindWindow
+GetWindowRect

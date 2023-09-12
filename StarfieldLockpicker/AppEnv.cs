@@ -6,44 +6,33 @@ namespace StarfieldLockpicker
 {
     public class AppEnv : ICoreInterface
     {
-        private AppConfig _config;
-        private BitmapPool fullSizePool;
-        private BitmapPool keyAreaPool;
-        private BitmapPool circleAreaPool;
+        private readonly AppConfig _config;
+        private readonly BitmapPool _bitmapPool;
 
-        public AppEnv(AppConfig config)
+        public AppEnv(AppConfig config, BitmapPool bitmapPool)
         {
             _config = config;
-            fullSizePool = new BitmapPool(config.TranslateRectangleCeiling(config.RegionOfInterest), config);
-            keyAreaPool = new BitmapPool(config.TranslateRectangleCeiling(config.RegionOfKeySelection), config);
-            circleAreaPool = new BitmapPool(config.TranslateRectangleCeiling(config.RegionOfCircle), config);
-        }
-
-        public void ReleaseUnusedBitmaps()
-        {
-            fullSizePool.ReleaseAll();
-            keyAreaPool.ReleaseAll();
-            circleAreaPool.ReleaseAll();
+            _bitmapPool = bitmapPool;
         }
 
         public Task<IFullImage> CaptureFullScreenAsync(CancellationToken cancellationToken)
         {
-            var bitmap = fullSizePool.Rent();
-            Utility.CaptureScreenArea(bitmap.Inner.Bitmap, _config.Display, fullSizePool.BitmapRect);
+            var bitmap = _bitmapPool.Rent(_config.ClientRegionOfInterest);
+            Utility.CaptureScreenArea(bitmap.Inner.Bitmap, _config.ClientRegionOfInterest);
             return Task.FromResult((IFullImage)bitmap);
         }
 
         public Task<ILockImage> CaptureLockImageAsync(CancellationToken cancellationToken)
         {
-            var bitmap = circleAreaPool.Rent();
-            Utility.CaptureScreenArea(bitmap.Inner.Bitmap, _config.Display, circleAreaPool.BitmapRect);
+            var bitmap = _bitmapPool.Rent(_config.ClientRegionOfCircle);
+            Utility.CaptureScreenArea(bitmap.Inner.Bitmap, _config.ClientRegionOfCircle);
             return Task.FromResult((ILockImage)bitmap);
         }
 
         public Task<IKeySelectionImage> CaptureKeyImageAsync(CancellationToken cancellationToken)
         {
-            var bitmap = keyAreaPool.Rent();
-            Utility.CaptureScreenArea(bitmap.Inner.Bitmap, _config.Display, keyAreaPool.BitmapRect);
+            var bitmap = _bitmapPool.Rent(_config.ClientRegionOfKeySelection);
+            Utility.CaptureScreenArea(bitmap.Inner.Bitmap, _config.ClientRegionOfKeySelection);
             return Task.FromResult((IKeySelectionImage)bitmap);
         }
 
