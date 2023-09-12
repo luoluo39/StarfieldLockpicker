@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Drawing;
+using System.Numerics;
 using StarfieldLockpicker.Core;
 
 namespace StarfieldLockpicker;

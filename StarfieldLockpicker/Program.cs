@@ -1,9 +1,14 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Windows.Win32;
+using Windows.Win32.UI.HiDpi;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using StarfieldLockpicker;
 using StarfieldLockpicker.Core;
+using Windows.System;
+using Windows.Win32.Foundation;
+using Windows.Win32.UI.WindowsAndMessaging;
 
 internal static class Program
 {
@@ -17,7 +22,7 @@ internal static class Program
 
     public static void Main(string[] args)
     {
-        Application.SetHighDpiMode(HighDpiMode.PerMonitor);
+        PInvoke.SetProcessDpiAwareness(PROCESS_DPI_AWARENESS.PROCESS_PER_MONITOR_DPI_AWARE);
         //no async method usage here because message loop need to run on main thread
         //ensure that the config is loaded
         AppConfig? config;
@@ -38,7 +43,9 @@ internal static class Program
 
         messageWindow.OnHoyKeyPressed += MessageWindow_OnHoyKeyPressed;
 
-        Application.Run(messageWindow);
+        messageWindow.Run();
+
+        CancelTask();
     }
 
 
@@ -56,7 +63,6 @@ internal static class Program
                 CancelTask();
             }
         }
-
     }
 
     private static void CancelTask()
