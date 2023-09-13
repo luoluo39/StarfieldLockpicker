@@ -14,16 +14,18 @@ public class MessageWindow
     public event Action? OnHoyKeyPressed;
 
     private readonly HWND _handle;
+    private readonly WNDPROC _wndproc;
 
     public MessageWindow(VKCode hotKey, uint modifiers)
     {
+        _wndproc = WindowProc;
         unsafe
         {
             const string className = "MessageWindowClass";
             fixed (char* pch = className)
             {
                 WNDCLASSW wc = new WNDCLASSW();
-                wc.lpfnWndProc = WindowProc;
+                wc.lpfnWndProc = _wndproc;
                 wc.hInstance = (HINSTANCE)GetModuleHandle(default(string)).DangerousGetHandle();
                 wc.lpszClassName = new PCWSTR(pch);
 
