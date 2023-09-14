@@ -20,7 +20,11 @@ public class AppConfig
         if (init)
             result.Init();
 
-        JsonSerializer.Serialize(utf8Json, result, new JsonSerializerOptions { WriteIndented = true });
+        JsonSerializer.Serialize(utf8Json, result, new JsonSerializerOptions
+        {
+            TypeInfoResolver = SourceGenerationContext.Default,
+            WriteIndented = true
+        });
 
         return result;
     }
@@ -31,15 +35,14 @@ public class AppConfig
         {
             var deserialized = JsonSerializer.Deserialize<AppConfig>(text, new JsonSerializerOptions
             {
+                TypeInfoResolver = SourceGenerationContext.Default,
                 ReadCommentHandling = JsonCommentHandling.Skip
             }) ?? throw new NullReferenceException("null deserialized");
 
             Console.WriteLine("config loaded");
             result = deserialized;
             result.ParseKeys();
-            if (init && !result.Init())
-                return false;
-            return true;
+            return !init || result.Init();
         }
         catch (Exception e)
         {
@@ -223,4 +226,10 @@ public class AppConfig
     [JsonIgnore] public Rectangle ClientRegionOfInterest { get; private set; }
     [JsonIgnore] public Rectangle ClientRegionOfCircle { get; private set; }
     [JsonIgnore] public Rectangle ClientRegionOfKeySelection { get; private set; }
+}
+
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(AppConfig))]
+internal partial class SourceGenerationContext : JsonSerializerContext
+{
 }
