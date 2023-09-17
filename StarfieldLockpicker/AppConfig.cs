@@ -55,6 +55,12 @@ public class AppConfig
 
     private static bool ParseKey(string str, out VKCode vkCode)
     {
+        if (str.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            vkCode = (VKCode)Convert.ToInt32(str, 16);
+            return true;
+        }
+
         if (str.Length == 1)
         {
             var sh = PInvoke.VkKeyScan(str[0]);
