@@ -53,33 +53,56 @@ public class AppConfig
         }
     }
 
+    private static bool ParseKey(string str, out VKCode vkCode)
+    {
+        if (str.Length == 1)
+        {
+            var sh = PInvoke.VkKeyScan(str[0]);
+            if (sh != -1)
+            {
+                vkCode = (VKCode)(sh & byte.MaxValue);
+                return true;
+            }
+        }
+
+        if (Enum.TryParse(str, true, out vkCode))
+            return true;
+
+        if (Enum.TryParse(str, true, out VIRTUAL_KEY vk) || Enum.TryParse("vk_" + str, true, out vk))
+        {
+            vkCode = (VKCode)vk;
+            return true;
+        }
+        return false;
+    }
+
     private void ParseKeys()
     {
         VKCode vk;
 
         var hotKeyStr = HotKey.Split('+').Last();
-        if (!Enum.TryParse(hotKeyStr, true, out vk))
+        if (!ParseKey(hotKeyStr, out vk))
             Utility.ConsoleError($"Key {hotKeyStr} can not be parsed");
         VirtualHotKey = vk;
         HotKeyModifier = (uint)ParseHotKeyModifiers(HotKey);
 
-        if (!Enum.TryParse(KeyPrevious, true, out vk))
+        if (!ParseKey(KeyPrevious, out vk))
             Utility.ConsoleError($"Key {KeyPrevious} can not be parsed");
         VirtualPrevious = vk;
 
-        if (!Enum.TryParse(KeyNext, true, out vk))
+        if (!ParseKey(KeyNext, out vk))
             Utility.ConsoleError($"Key {KeyNext} can not be parsed");
         VirtualNext = vk;
 
-        if (!Enum.TryParse(KeyRotateAntiClockwise, true, out vk))
+        if (!ParseKey(KeyRotateAntiClockwise, out vk))
             Utility.ConsoleError($"Key {KeyRotateAntiClockwise} can not be parsed");
         VirtualRotateAntiClockwise = vk;
 
-        if (!Enum.TryParse(KeyRotateClockwise, true, out vk))
+        if (!ParseKey(KeyRotateClockwise, out vk))
             Utility.ConsoleError($"Key {KeyRotateClockwise} can not be parsed");
         VirtualRotateClockwise = vk;
 
-        if (!Enum.TryParse(KeyInsert, true, out vk))
+        if (!ParseKey(KeyInsert, out vk))
             Utility.ConsoleError($"Key {KeyInsert} can not be parsed");
         VirtualInsert = vk;
     }

@@ -19,3 +19,4 @@ GetMessage
 TranslateMessage
 DispatchMessage
 DefWindowProc
+VkKeyScan

@@ -27,6 +27,11 @@ public class BenchmarkTimer
         PrecisionTimer.Wait(TimeSpan.FromMilliseconds(20), cts.Token);
     }
     [Benchmark]
+    public void Delay20()
+    {
+        Task.Delay(20).Wait();
+    }
+    [Benchmark]
     public void Sleep20()
     {
         Thread.Sleep(20);
